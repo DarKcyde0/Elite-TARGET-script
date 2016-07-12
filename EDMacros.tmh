@@ -1,0 +1,139 @@
+// Init vars used in script
+int mRequestDock, mPowerPlant;
+int mThrottleFwdOnly, mThrottleFullScale, mThrottlePrecision, mTG2mode;
+//int LED_BRT_OFF, LED_BRT_1, LED_BRT_2, LED_BRT_3, LED_BRT_4, LED_BRT_5;
+int LED_BAR_0, LED_BAR_1, LED_BAR_2, LED_BAR_3, LED_BAR_4, LED_BAR_5;
+
+int SetThrottle() {  //Prevents throttle jumping around on mode change
+	DXAxis(DX_Z_AXIS, -AxisVal(Throttle[THR_RIGHT], &axdata));
+}
+
+int initJoystickAxis() {
+	MapAxis(&Joystick, JOYX, DX_X_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+		SetSCurve(&Joystick, JOYX, 0, 0, 0, 0, 0);
+	MapAxis(&Joystick, JOYY, DX_Y_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+		SetSCurve(&Joystick, JOYY, 0, 0, 0, 0, 0);
+}
+
+int initThrottleAxis() {
+	// LED Backlight Control
+//	LED_BRT_OFF = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 0));");
+//	LED_BRT_1 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 64));");
+//	LED_BRT_2 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 128));");
+//	LED_BRT_3 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 156));");
+//	LED_BRT_4 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 192));");
+//	LED_BRT_5 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 224));");
+	// Friction Control sets backlight level on Shiftmode
+	//KeyAxis (&Throttle, THR_FC, 'i', 
+	//	AXMAP2(6, LED_BRT_5, LED_BRT_4, LED_BRT_3, LED_BRT_2, LED_BRT_1, LED_BRT_OFF));
+	
+	// LED bar on throttle, for giggles/show off.
+	LED_BAR_0 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_ONOFF, LED_CURRENT-LED1-LED2-LED3-LED4-LED5));");
+	LED_BAR_1 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_ONOFF, LED_CURRENT-LED1-LED2-LED3-LED4+LED5));");
+	LED_BAR_2 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_ONOFF, LED_CURRENT-LED1-LED2-LED3+LED4+LED5));");
+	LED_BAR_3 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_ONOFF, LED_CURRENT-LED1-LED2+LED3+LED4+LED5));");
+	LED_BAR_4 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_ONOFF, LED_CURRENT-LED1+LED2+LED3+LED4+LED5));");
+	LED_BAR_5 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_ONOFF, LED_CURRENT+LED1+LED2+LED3+LED4+LED5));");
+	KeyAxis (&Throttle, THR_RIGHT, 'ioumd', 
+		AXMAP2(6, LED_BAR_0, LED_BAR_1,	LED_BAR_2, LED_BAR_3, LED_BAR_4, LED_BAR_5)	);
+		
+	MapAxis(&Throttle, SCX, DX_XROT_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+		SetSCurve(&Throttle, SCX, 0, 0, 0, 4, 0);
+	MapAxis(&Throttle, SCY, DX_YROT_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+		SetSCurve(&Throttle, SCY, 0, 0, 0, 4, 0);
+	MapAxis(&Throttle, THR_RIGHT, DX_Z_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+		TrimDXAxis(DX_Z_AXIS, SET(-1024));
+		SetSCurve(&Throttle, THR_RIGHT, 0, -100, 0, 0);
+		SetThrottle();
+	MapAxis(&Throttle, THR_LEFT, DX_ZROT_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+		SetSCurve(&Throttle, THR_LEFT, 0, 0, 0, 0, 0);
+	MapAxis(&Throttle, THR_FC, DX_SLIDER_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+		SetSCurve(&Throttle, THR_FC, 0, 0, 0, 0, 0);
+
+}
+
+
+int initCustomCommands() {
+	// TG2 Mode toggle - PIPs to WEP / 2ndary fire.
+//	mTG2mode = SEQ ( EXEC("MapKeyUMD(&Joystick, TG2, EXEC(\"mPower(WEP,SYS);\"), EXEC(\"mPower(WEP);\"), EXEC(\"mPower(WEP,ENG);\"));"),
+//	EXEC("MapKey(&Joystick, TG2, DX2);")
+//	);
+	
+	// Dock request
+	mRequestDock = CHAIN(
+		LOCK+PULSE+TargetPanel, D(),
+		PULSE+UINextPanel, D(),
+		PULSE+UINextPanel, D(),
+		PULSE+UISelect, D(),
+		PULSE+UIDown, D(),
+		PULSE+UISelect, D(),
+		PULSE+UIPrevPanel, D(),
+		PULSE+UIPrevPanel, D(),
+		PULSE+UIBack, LOCK
+	);
+
+	// SelectPrevSubsystem x 6 (Targets Powerplant, or close to it)
+	mPowerPlant = CHAIN(
+		PULSE+SelectPrevSubsystem, D(),
+		PULSE+SelectPrevSubsystem, D(),
+		PULSE+SelectPrevSubsystem, D(),
+		PULSE+SelectPrevSubsystem, D(),
+		PULSE+SelectPrevSubsystem, D(),
+		PULSE+SelectPrevSubsystem
+	);
+
+	// Trim first 50% of throttle movement
+	mThrottleFwdOnly = EXEC(
+		"TrimDXAxis(DX_Z_AXIS, SET(-1024));"
+		"SetSCurve(&Throttle, THR_RIGHT, 0, -100, 0, 0);"
+		"SetThrottle();"
+	);
+	// Make throttle liniar and full scale
+	mThrottleFullScale = EXEC(
+		"TrimDXAxis(DX_Z_AXIS, SET(0));"
+		"SetSCurve(&Throttle, THR_RIGHT, 0, 5, 0, 0);"
+		"SetThrottle();"
+	);
+	// Trim throttle to 1/3, bi-directional, with curve to make center less sensitive
+	mThrottlePrecision = EXEC(
+		"TrimDXAxis(DX_Z_AXIS, SET(0));" 
+		"SetSCurve(&Throttle, THR_RIGHT, 0, 2, 0, 2, -3);"
+		"SetThrottle();"
+	);
+}
+
+// =======================================================================================
+// mPower sets PIPs as requested
+// 1st Param gets 4 PIPs
+// 2nd Param gets 2 PIPs
+// If no 2nd param, balanced 1 PIP on each 2ndary power
+// When no params sent, balances power.
+// =======================================================================================
+define SYS 1
+define ENG 2
+define WEP 3
+
+int mPower(int x=0, int y=0) {
+	int PIPfull, PIPhalf;
+	
+	// Map out PIPs
+	if (x == 0) PIPfull = 0;
+	else if (x == SYS) PIPfull = PULSE+ PowerSys;
+	else if (x == ENG) PIPfull = PULSE+ PowerEng;
+	else if (x == WEP) PIPfull = PULSE+ PowerWep;
+	
+	
+	if (y == 0) PIPhalf = 0;
+	else if (y == SYS) PIPhalf = PULSE+ PowerSys;
+	else if (y == ENG) PIPhalf = PULSE+ PowerEng;
+	else if (y == WEP) PIPhalf = PULSE+ PowerWep;
+		
+	// Send PIPs
+	ActKey(KEYON+ CHAIN(
+		PULSE+ BalancePower, D(),
+		PIPfull, D(),
+		PIPhalf, D(),
+		PIPfull, D(),
+		PIPfull
+	));
+}

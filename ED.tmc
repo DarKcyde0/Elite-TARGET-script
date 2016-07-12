@@ -1,0 +1,210 @@
+include "target.tmh" // Default system import
+include "usb_keys.tmh" //USB Keycodes
+//include "EDSettings.tmh" // Global settings definition
+include "EDKeyMap.ttm" // Key mapping
+include "EDMacros.tmh" // Macros definition
+
+define HOLD 350 // milliseconds
+define JETTISON_CARGO_DELAY 2500 // milliseconds, recommend 2-3 seconds.
+
+// Init vars
+int TriggerWEP;
+
+int main() {
+	
+	// Exclude missing devices
+	Configure(&HCougar, MODE_EXCLUDED);
+	Configure(&T16000, MODE_EXCLUDED);
+	Configure(&T16000L, MODE_EXCLUDED);
+	Configure(&LMFD, MODE_EXCLUDED);
+	Configure(&RMFD, MODE_EXCLUDED);
+	Configure(&TWCSThrottle, MODE_EXCLUDED);
+	Configure(&TFRPRudder, MODE_KEEPENABLED); //Change to MODE_FILTERED for binding conflicts.
+
+	if(Init(&EventHandle)) return 1;
+
+	// Base settings
+	SetKBRate(25, 75);
+	SetKBLayout(KB_ENG);
+	ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 43)); // Init LEDs, 0, 43, 86, 129, 172, 215
+	SetShiftButton(&Joystick, S3, &Throttle, BSF, BSB); // Pinky for IO, Boat switch for UMD
+
+	// Init
+	initCustomCommands();
+	initJoystickAxis();
+	initThrottleAxis();
+
+	// =======================================================================================
+	// Map joystick
+	// =======================================================================================
+	MapKey(&Joystick, TG1, DX1);
+	MapKeyUMD(&Joystick, TG2,     //Squeeze to intensify forward fire power
+		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,ENG); }" ), //U
+		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP); }" ),     //M
+		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,SYS); }" )  //D
+		);  
+	MapKeyRUMD(&Joystick, TG1,   //On Trigger release, check if TG2 pressed, redirect power to engines
+		EXEC("if (TriggerWEP) { TriggerWEP = 0; mPower(ENG,WEP); }"),  //U
+		EXEC("if (TriggerWEP) { TriggerWEP = 0; mPower(ENG); }"),      //M
+		EXEC("if (TriggerWEP) { TriggerWEP = 0; mPower(ENG,SYS); }")   //D
+		);
+	
+	//Mode 
+	MapKey(&Joystick, S1, TEMPO(NextFireGroup, PrevFireGroup, HOLD));
+	//Pickle 
+	MapKey(&Joystick, S2, TEMPO(Chaff, PULSE+UseShieldCell, HOLD));
+	//Pinky/Nose-wheel
+	MapKey(&Joystick, S3, TEMPO(DisableFlightAssist, 0));  // IO shift on hold
+	//Paddle switch
+	MapKey(&Joystick, S4, DX2);  // Holding Pickle for 2ndary fire is painful, the paddle is much easier.
+
+	// China hat power control
+	// Shift or hold always sends single power press
+	// UMD mode changes 2ndary power balance. U = attack, M = balanced, D = defence/run
+	MapKeyIOUMD(&Joystick, H1U, 
+		PULSE+PowerEng, //I U 
+		TEMPO(EXEC("mPower(ENG,WEP);"), PULSE+PowerEng, HOLD), //O U 
+		PULSE+PowerEng, //I M  
+		TEMPO(EXEC("mPower(ENG);"), PULSE+PowerEng, HOLD), //O M 
+		PULSE+PowerEng, //I D 
+		TEMPO(EXEC("mPower(ENG,SYS);"), PULSE+PowerEng, HOLD) //O D
+		); 
+		
+	MapKey(&Joystick, H1D, PULSE+BalancePower);
+	
+	MapKeyIOUMD(&Joystick, H1L, 
+		PULSE+PowerSys, //I U 
+		TEMPO(EXEC("mPower(SYS,WEP);"), PULSE+PowerSys, HOLD), //O U 
+		PULSE+PowerSys, //I M  
+		TEMPO(EXEC("mPower(SYS);"), PULSE+PowerSys, HOLD), //O M 
+		PULSE+PowerSys, //I D 
+		TEMPO(EXEC("mPower(SYS,ENG);"), PULSE+PowerSys, HOLD) //O D
+		); 
+	
+	MapKeyIOUMD(&Joystick, H1R, 
+		PULSE+PowerWep, //I U 
+		TEMPO(EXEC("mPower(WEP,ENG);"), PULSE+PowerWep, HOLD), //O U 
+		PULSE+PowerWep, //I M  
+		TEMPO(EXEC("mPower(WEP);"), PULSE+PowerWep, HOLD), //O M 
+		PULSE+PowerWep, //I D 
+		TEMPO(EXEC("mPower(WEP,SYS);"), PULSE+PowerWep, HOLD) //O D
+		); 
+	
+	//TMS
+	MapKey(&Joystick, H2U, TEMPO(PULSE+SelectTargetAhead, PULSE+SelectHighestThreat, HOLD));
+	MapKey(&Joystick, H2D, PULSE+SelectHighestThreat);
+	MapKeyIO(&Joystick, H2L, PULSE+SelectPrevShip, PULSE+SelectPrevHostileShip);
+	MapKeyIO(&Joystick, H2R, PULSE+SelectNextShip, PULSE+SelectNextHostileShip);
+
+	//DMS
+	MapKey(&Joystick, H3U, TEMPO(PULSE+CommsPanel, PULSE+QuickCommsPanel, HOLD));
+	MapKey(&Joystick, H3D, TEMPO(PULSE+SensorPanel, PULSE+UIEscape, HOLD));
+	MapKey(&Joystick, H3L, TEMPO(PULSE+TargetPanel, PULSE+SystemMap, HOLD));
+	MapKey(&Joystick, H3R, TEMPO(PULSE+SystemPanel, PULSE+GalaxyMap, HOLD));
+
+	//CMS
+	MapKey(&Joystick, H4U, UIUp);
+	MapKey(&Joystick, H4D, UIDown);
+	MapKeyIO(&Joystick, H4L, UIPrevPanel, TEMPO(UILeft, PULSE+UIPrevPanel, HOLD));
+	MapKeyIO(&Joystick, H4R, UINextPanel, TEMPO(UIRight, PULSE+UINextPanel, HOLD));
+	MapKeyIO(&Joystick, H4P, UIBack, TEMPO(UISelect, PULSE+UIBack, HOLD));
+
+	// =======================================================================================
+	// Map throttle
+	// =======================================================================================
+	MapKey(&Throttle, MSU, ThrustUp);
+	MapKey(&Throttle, MSD, ThrustDown);
+	MapKey(&Throttle, MSL, ThrustLeft);
+	MapKey(&Throttle, MSR, ThrustRight);
+	MapKey(&Throttle, MSP, Microphone);
+
+	MapKey(&Throttle, SPDF, PULSE+DeployHardpoints);  //Hardpoints and FSD mutually exclusive, good for same switch
+	MapKeyR(&Throttle, SPDF, PULSE+DeployHardpoints);
+	MapKey(&Throttle, SPDB, TEMPO(PULSE+ FrameShiftDrive, Supercruise, HOLD)); // When FSD target is blocked, Hold for Supercruise
+
+	MapKey(&Throttle, BSF, 0); //UMD switch
+	MapKey(&Throttle, BSM, 0);
+	MapKey(&Throttle, BSB, 0);
+
+	MapKey(&Throttle, CHF, SilentRunning);
+	MapKey(&Throttle, CHB, PULSE+DeployHeatSink);
+
+	MapKey(&Throttle, PSF, mThrottleFwdOnly);
+	MapKey(&Throttle, PSM, mThrottleFullScale);
+	MapKey(&Throttle, PSB, mThrottlePrecision);
+
+	MapKey(&Throttle, LTB, EXEC("if (!Throttle[PSB]) ActKey(KEYON+PULSE+EngineBoost);")); //Dont boost when landing/precise maneouvers
+
+	MapKey(&Throttle, SC, TEMPO(PULSE+SelectNextSystemInRoute, UIFocus, HOLD)); 
+
+	MapKeyIO(&Throttle, CSU, TargetWingmans_Target, TEMPO(PULSE+SelectPrevSubsystem, mPowerPlant, HOLD));
+	MapKeyIO(&Throttle, CSD, TargetWingman2, PULSE+SelectNextSubsystem);
+	MapKeyIO(&Throttle, CSL, TargetWingman3, PULSE+SelectPrevShip);
+	MapKeyIO(&Throttle, CSR, TargetWingman1, PULSE+SelectNextShip);
+
+	MapKeyIO(&Throttle, IDLELON, PULSE+ReverseThrottle, 0);  // Reverse on Shiftmode
+	MapKey(&Throttle, IDLELOFF, 0);
+	MapKey(&Throttle, IDLERON, BuggyEbrake);
+	MapKey(&Throttle, IDLEROFF, 0);
+
+	MapKey(&Throttle, EFLNORM, CHAIN(PULSE+PhotoCamera, D(),PULSE+UISelect));
+	MapKeyR(&Throttle, EFLNORM, PULSE+PhotoCamera);
+	MapKey(&Throttle, EFLOVER, 0);
+	
+	MapKey(&Throttle, EFRNORM, DOWN+UIFocus);  //Hold UIFocus to prevent side-panel popup (VR/trackIR)
+	MapKey(&Throttle, EFROVER, UP+UIFocus);
+
+	MapKey(&Throttle, EOLIGN, WingNavLock);
+	MapKey(&Throttle, EOLNORM, 0);
+	MapKey(&Throttle, EOLMOTOR, 0);
+	MapKey(&Throttle, EORIGN, mRequestDock); // Press up when full throttle!
+	MapKey(&Throttle, EORNORM, 0);
+	MapKey(&Throttle, EORMOTOR, 0);
+
+	MapKey(&Throttle, APUON, TEMPO(0, PULSE+JettisonAllCargo, JETTISON_CARGO_DELAY));  // Must hold for 2-3 sec
+	MapKey(&Throttle, APUOFF, 0);
+
+	MapKey(&Throttle, FLAPU, PULSE+ShipLights);
+	MapKey(&Throttle, FLAPM, PULSE+ShipLights);
+	MapKey(&Throttle, FLAPD, PULSE+ShipLights);
+
+	MapKey(&Throttle, LDGH, HMDReset);
+
+	MapKey(&Throttle, EACON, PULSE+LandingGear);
+	MapKey(&Throttle, EACOFF, PULSE+LandingGear);
+
+	MapKey(&Throttle, RDRNRM, 0);
+	MapKey(&Throttle, RDRDIS, CargoScoop);
+
+	MapKey(&Throttle, APENG, EXEC("EngageAPkey();"));
+	MapKey(&Throttle, APDIS, 0);
+
+	MapKey(&Throttle, APPAT, 0);  //Mode select for APENG
+	MapKey(&Throttle, APAH, 0);
+	MapKey(&Throttle, APALT, 0);
+}
+
+	// Autopilot Engage button depends on LASTE position
+int EngageAPkey() {
+	if (Throttle[APPAT]) ActKey(KEYON+PULSE+ HUD);
+	if (Throttle[APAH]) ActKey(KEYON+PULSE+ OrbitLines);
+	if (Throttle[APALT]) ActKey(KEYON+PULSE+ Screenshot);
+}
+
+int EventHandle(int type, alias o, int x) {
+	int LED_BRT, TRPCOMBO;
+
+	// LED backlight control - press S3 + THR_FC axis.
+	if (&o == &Throttle & x == THR_FC & Joystick[S3]) {
+		LED_BRT = (AxisVal(Throttle[THR_FC], &axdata) - 32766) / 256 * -1;
+		ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, LED_BRT));
+	}
+	
+	// Combine rudder toe brakes into new axis, mapped to DX_THROTTLE_AXIS
+	if (&o == &TFRPRudder & (x == TRPLEFT | x == TRPRIGHT)) {
+		if (TFRPRudder[TRPLEFT] < TFRPRudder[TRPRIGHT]) TRPCOMBO = TFRPRudder[TRPRIGHT];
+		else TRPCOMBO = TFRPRudder[TRPLEFT];
+		DXAxis (DX_THROTTLE_AXIS, TRPCOMBO);
+	}
+	else DefaultMapping(&o, x);
+}

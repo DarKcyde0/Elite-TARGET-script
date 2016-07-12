@@ -1,0 +1,93 @@
+//External bindings
+//See usb_keys.tmh for key list
+
+// Weapons
+define PrimaryFire MOUSE_LEFT
+define SecondaryFire MOUSE_RIGHT
+define NextFireGroup USB_N // N
+define PrevFireGroup L_SHIFT+USB_N // Shift-N
+define DeployHardpoints USB_U // U
+
+// UI
+define UISelect USB_SPC // Space
+define UIBack USB_BSP // Backspace
+define UIFocus USB_CAPS_LOCK  // Capslock
+define UIUp USB_W // W
+define UIDown USB_S // S
+define UILeft USB_A // A
+define UIRight USB_D //D
+define UINextPanel L_SHIFT+USB_E // shift-E
+define UIPrevPanel L_SHIFT+USB_Q // shift-Q
+define TargetPanel USB_1 // 1
+define SystemPanel USB_4 // 4
+define CommsPanel USB_2 // 2
+define QuickCommsPanel USB_ENT // Enter
+define SensorPanel USB_3 // 3
+define UIEscape USB_ESC // Escape
+define SystemMap USB_COMMA // ,
+define GalaxyMap USB_PERIOD // .
+
+// Flight
+define DisableFlightAssist USB_Z // Z
+define ThrustUp USB_R // R
+define ThrustDown USB_F // F
+define ThrustLeft USB_Q // Q
+define ThrustRight USB_E // E
+define SetSpeedZero USB_X // X
+define ReverseThrottle L_SHIFT+USB_X // shift-X
+define EngineBoost USB_TAB // tab
+
+//FSD
+define FrameShiftDrive USB_J // J
+define Supercruise L_SHIFT+USB_J// Shift-J
+define Hyperdrive L_ALT+USB_J // Alt-J
+define WingNavLock USB_MINUS // -
+
+// Targeting
+define SelectTargetAhead USB_T // T
+define SelectNextShip USB_G // G
+define SelectPrevShip L_SHIFT+USB_G // Left shift + G
+define SelectHighestThreat L_SHIFT+USB_T // Left shift + T
+define SelectNextHostileShip USB_H // H
+define SelectPrevHostileShip L_SHIFT+USB_H // Left shift + H
+define SelectNextSubsystem USB_Y // Y
+define SelectPrevSubsystem L_SHIFT+USB_Y // Left shift + Y
+define SelectNextSystemInRoute USB_M // M
+define TargetWingman1 USB_7 // 7
+define TargetWingman2 USB_8 // 8
+define TargetWingman3 USB_9 // 9
+define TargetWingmans_Target USB_0 // 0
+
+// Cooling/ECM
+define SilentRunning USB_DEL // Del
+define DeployHeatSink USB_V // V
+define UseShieldCell USB_I // I
+define Chaff USB_O // O
+
+// Miscellaneous
+define ShipLights USB_INS // Insert
+define IncreseSensorZoom USB_PGUP // PGUP
+define DecreaseSensorZoom USB_PGDN // PGDN
+define PowerEng USB_UARROW // Up arrow
+define PowerWep USB_RARROW // Right arrow
+define PowerSys USB_LARROW // Left arrow
+define BalancePower USB_DARROW // Down arrow
+define CargoScoop USB_HOME // Home
+define JettisonAllCargo USB_END // End
+define LandingGear USB_L // L
+define OrbitLines USB_EQUALS // =
+define HMDReset USB_F12 // F12
+define HUD L_CTL+L_ALT+USB_G // Ctrl-Alt-G
+define Microphone USB_BACKSLASH // \
+define PhotoCamera L_CTL+L_ALT+USB_SPC // Ctrl-Alt-Space
+define Pause USB_P // P
+define Screenshot USB_F10 //F10
+define ScreenshotHighRez L_ALT+USB_F10 //Alt-F10
+define Framerate L_CTL+USB_F // Ctrl-F
+define ConnStats L_CTL+USB_B  // Ctrl-B
+
+// Buggy
+define VerticalThrusters USB_SPC // Space
+define BuggyEbrake USB_X // X
+define BuggyTurret USB_U // U
+
