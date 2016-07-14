@@ -105,6 +105,9 @@ define USB_KP9				USB[0x61]
 define USB_KP0				USB[0x62]
 define USB_KP_DOT			USB[0x63]
 define USB_EUROPE_2			USB[0x64]
+define USB_APPLICATION		USB[0x65] // [101] Application
+define USB_POWER			USB[0x66] // [102] Power
+
 define USB_KPEQUALS			USB[0x67]
 
 define USB_F13              USB[0x68]
@@ -120,7 +123,9 @@ define USB_F22              USB[0x71]
 define USB_F23              USB[0x72]
 define USB_F24              USB[0x73]
 
-// TODO: International keys go here.
+define USB_MUTE				USB[0x7F] // Mute
+define USB_VOLUMEUP			USB[0x80] // Volume Up
+define USB_VOLUMEDOWN		USB[0x81] // Volume Down
 
 define USB_L_CTL			USB[0xE0]
 define USB_L_SHIFT			USB[0xE1]

@@ -1,12 +1,17 @@
 // Init vars used in script
 int mRequestDock, mPowerPlant;
-int mThrottleFwdOnly, mThrottleFullScale, mThrottlePrecision, mTG2mode;
-//int LED_BRT_OFF, LED_BRT_1, LED_BRT_2, LED_BRT_3, LED_BRT_4, LED_BRT_5;
+int mThrottleFwdOnly, mThrottleFullScale, mThrottlePrecision, mSplitThrottle;
+int split = 0;  //Flag for mSplitThrottle
 int LED_BAR_0, LED_BAR_1, LED_BAR_2, LED_BAR_3, LED_BAR_4, LED_BAR_5;
 
 int SetThrottle() {  //Prevents throttle jumping around on mode change
 	DXAxis(DX_Z_AXIS, -AxisVal(Throttle[THR_RIGHT], &axdata));
 }
+
+
+//SetSCurve(&Device, axis, left_deadzone%, center_deadzone%, right_deadzone%, curve(-20...20), scale);
+//SetJCurve(&device, axis, physical axis value%, DirectX output value%);
+//TrimDXAxis(axis, +/-1024) trim is additive, SET forces trim value, CURRENT reads axis.pos
 
 int initJoystickAxis() {
 	MapAxis(&Joystick, JOYX, DX_X_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
@@ -16,7 +21,8 @@ int initJoystickAxis() {
 }
 
 int initThrottleAxis() {
-	// LED Backlight Control
+//	LED Backlight Control
+//	int LED_BRT_OFF, LED_BRT_1, LED_BRT_2, LED_BRT_3, LED_BRT_4, LED_BRT_5;
 //	LED_BRT_OFF = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 0));");
 //	LED_BRT_1 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 64));");
 //	LED_BRT_2 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 128));");
@@ -45,7 +51,7 @@ int initThrottleAxis() {
 		TrimDXAxis(DX_Z_AXIS, SET(-1024));
 		SetSCurve(&Throttle, THR_RIGHT, 0, -100, 0, 0);
 		SetThrottle();
-	MapAxis(&Throttle, THR_LEFT, DX_ZROT_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+	//MapAxis(&Throttle, THR_LEFT, DX_ZROT_AXIS, AXIS_REVERSED, MAP_ABSOLUTE);
 		SetSCurve(&Throttle, THR_LEFT, 0, 0, 0, 0, 0);
 	MapAxis(&Throttle, THR_FC, DX_SLIDER_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
 		SetSCurve(&Throttle, THR_FC, 0, 0, 0, 0, 0);
@@ -54,11 +60,6 @@ int initThrottleAxis() {
 
 
 int initCustomCommands() {
-	// TG2 Mode toggle - PIPs to WEP / 2ndary fire.
-//	mTG2mode = SEQ ( EXEC("MapKeyUMD(&Joystick, TG2, EXEC(\"mPower(WEP,SYS);\"), EXEC(\"mPower(WEP);\"), EXEC(\"mPower(WEP,ENG);\"));"),
-//	EXEC("MapKey(&Joystick, TG2, DX2);")
-//	);
-	
 	// Dock request
 	mRequestDock = CHAIN(
 		LOCK+PULSE+TargetPanel, D(),
@@ -100,14 +101,26 @@ int initCustomCommands() {
 		"SetSCurve(&Throttle, THR_RIGHT, 0, 2, 0, 2, -3);"
 		"SetThrottle();"
 	);
+	// Map Left Throttle to ThrustUp/Dn (toggle)
+	mSplitThrottle = EXEC(
+		"if (Throttle[IDLELON] & Throttle[IDLEROFF]) {"  //Check that only Left Thr is IDLE
+			"if (!split) {"
+				"MapAxis(&Throttle, THR_LEFT, DX_ZROT_AXIS, AXIS_REVERSED);"
+				"split = 1;}"
+			"else {"
+				"MapAxis(&Throttle, THR_LEFT, 0);"
+				"split = 0;}"
+		"}"
+	);
 }
 
 // =======================================================================================
 // mPower sets PIPs as requested
+// Params = SYS, ENG, WEP
 // 1st Param gets 4 PIPs
 // 2nd Param gets 2 PIPs
 // If no 2nd param, balanced 1 PIP on each 2ndary power
-// When no params sent, balances power.
+// If no params, balances power.
 // =======================================================================================
 define SYS 1
 define ENG 2

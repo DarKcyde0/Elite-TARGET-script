@@ -120,7 +120,7 @@ int main() {
 
 	MapKey(&Throttle, SPDF, PULSE+DeployHardpoints);  //Hardpoints and FSD mutually exclusive, good for same switch
 	MapKeyR(&Throttle, SPDF, PULSE+DeployHardpoints);
-	MapKey(&Throttle, SPDB, TEMPO(PULSE+ FrameShiftDrive, Supercruise, HOLD)); // When FSD target is blocked, Hold for Supercruise
+	MapKeyIO(&Throttle, SPDB, WingNavLock, TEMPO(PULSE+ FrameShiftDrive, Supercruise, HOLD)); // When FSD target is blocked, Hold for Supercruise
 
 	MapKey(&Throttle, BSF, 0); //UMD switch
 	MapKey(&Throttle, BSM, 0);
@@ -133,16 +133,16 @@ int main() {
 	MapKey(&Throttle, PSM, mThrottleFullScale);
 	MapKey(&Throttle, PSB, mThrottlePrecision);
 
-	MapKey(&Throttle, LTB, EXEC("if (!Throttle[PSB]) ActKey(KEYON+PULSE+EngineBoost);")); //Dont boost when landing/precise maneouvers
+	MapKey(&Throttle, LTB, EXEC("if (!PSB]) ActKey(KEYON+PULSE+EngineBoost);")); //Dont boost when landing/precise maneouvers
 
-	MapKey(&Throttle, SC, TEMPO(PULSE+SelectNextSystemInRoute, UIFocus, HOLD)); 
+	MapKey(&Throttle, SC, TEMPO(PULSE+SelectNextSystemInRoute, BuggyEbrake, HOLD)); 
 
 	MapKeyIO(&Throttle, CSU, TargetWingmans_Target, TEMPO(PULSE+SelectPrevSubsystem, mPowerPlant, HOLD));
 	MapKeyIO(&Throttle, CSD, TargetWingman2, PULSE+SelectNextSubsystem);
 	MapKeyIO(&Throttle, CSL, TargetWingman3, PULSE+SelectPrevShip);
 	MapKeyIO(&Throttle, CSR, TargetWingman1, PULSE+SelectNextShip);
 
-	MapKeyIO(&Throttle, IDLELON, PULSE+ReverseThrottle, 0);  // Reverse on Shiftmode
+	MapKey(&Throttle, IDLELON, TEMPO(0, mSplitThrottle, HOLD));  //Needs delay, prevents accidental usage, give time for both throttles to idle.
 	MapKey(&Throttle, IDLELOFF, 0);
 	MapKey(&Throttle, IDLERON, BuggyEbrake);
 	MapKey(&Throttle, IDLEROFF, 0);
@@ -151,12 +151,12 @@ int main() {
 	MapKeyR(&Throttle, EFLNORM, PULSE+PhotoCamera);
 	MapKey(&Throttle, EFLOVER, 0);
 	
-	MapKey(&Throttle, EFRNORM, DOWN+UIFocus);  //Hold UIFocus to prevent side-panel popup (VR/trackIR)
-	MapKey(&Throttle, EFROVER, UP+UIFocus);
+	MapKey(&Throttle, EFRNORM, 0);
+	MapKey(&Throttle, EFROVER, 0);
 
-	MapKey(&Throttle, EOLIGN, WingNavLock);
+	MapKey(&Throttle, EOLIGN, USB_VOLUMEUP);
 	MapKey(&Throttle, EOLNORM, 0);
-	MapKey(&Throttle, EOLMOTOR, 0);
+	MapKey(&Throttle, EOLMOTOR, USB_VOLUMEDOWN);
 	MapKey(&Throttle, EORIGN, mRequestDock); // Press up when full throttle!
 	MapKey(&Throttle, EORNORM, 0);
 	MapKey(&Throttle, EORMOTOR, 0);
