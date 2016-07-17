@@ -1,6 +1,5 @@
 include "target.tmh" // Default system import
 include "usb_keys.tmh" //USB Keycodes
-//include "EDSettings.tmh" // Global settings definition
 include "EDKeyMap.ttm" // Key mapping
 include "EDMacros.tmh" // Macros definition
 
@@ -133,7 +132,7 @@ int main() {
 	MapKey(&Throttle, PSM, mThrottleFullScale);
 	MapKey(&Throttle, PSB, mThrottlePrecision);
 
-	MapKey(&Throttle, LTB, EXEC("if (!PSB]) ActKey(KEYON+PULSE+EngineBoost);")); //Dont boost when landing/precise maneouvers
+	MapKey(&Throttle, LTB, EXEC("if (!Throttle[PSB]) ActKey(KEYON+PULSE+EngineBoost);")); //Dont boost when landing/precise maneouvers
 
 	MapKey(&Throttle, SC, TEMPO(PULSE+SelectNextSystemInRoute, BuggyEbrake, HOLD)); 
 

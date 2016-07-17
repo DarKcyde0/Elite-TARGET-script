@@ -47,9 +47,9 @@ int initThrottleAxis() {
 		SetSCurve(&Throttle, SCX, 0, 0, 0, 4, 0);
 	MapAxis(&Throttle, SCY, DX_YROT_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
 		SetSCurve(&Throttle, SCY, 0, 0, 0, 4, 0);
-	MapAxis(&Throttle, THR_RIGHT, DX_Z_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
-		TrimDXAxis(DX_Z_AXIS, SET(-1024));
-		SetSCurve(&Throttle, THR_RIGHT, 0, -100, 0, 0);
+	MapAxis(&Throttle, THR_RIGHT, DX_Z_AXIS, AXIS_REVERSED, MAP_ABSOLUTE);
+		TrimDXAxis(DX_Z_AXIS, SET(1024));
+		SetSCurve(&Throttle, THR_RIGHT, 0, -100, 0, 0, 0);
 		SetThrottle();
 	//MapAxis(&Throttle, THR_LEFT, DX_ZROT_AXIS, AXIS_REVERSED, MAP_ABSOLUTE);
 		SetSCurve(&Throttle, THR_LEFT, 0, 0, 0, 0, 0);
@@ -85,7 +85,7 @@ int initCustomCommands() {
 
 	// Trim first 50% of throttle movement
 	mThrottleFwdOnly = EXEC(
-		"TrimDXAxis(DX_Z_AXIS, SET(-1024));"
+		"TrimDXAxis(DX_Z_AXIS, SET(1024));"
 		"SetSCurve(&Throttle, THR_RIGHT, 0, -100, 0, 0);"
 		"SetThrottle();"
 	);
