@@ -18,7 +18,7 @@ int main() {
 	Configure(&LMFD, MODE_EXCLUDED);
 	Configure(&RMFD, MODE_EXCLUDED);
 	Configure(&TWCSThrottle, MODE_EXCLUDED);
-	Configure(&TFRPRudder, MODE_KEEPENABLED); //Change to MODE_FILTERED for binding conflicts.
+	Configure(&TFRPRudder, MODE_FILTERED); //Change to MODE_FILTERED for binding conflicts.
 
 	if(Init(&EventHandle)) return 1;
 
@@ -203,7 +203,17 @@ int EventHandle(int type, alias o, int x) {
 	if (&o == &TFRPRudder & (x == TRPLEFT | x == TRPRIGHT)) {
 		if (TFRPRudder[TRPLEFT] < TFRPRudder[TRPRIGHT]) TRPCOMBO = TFRPRudder[TRPRIGHT];
 		else TRPCOMBO = TFRPRudder[TRPLEFT];
-		DXAxis (DX_THROTTLE_AXIS, TRPCOMBO);
+		DXAxis (DX_THROTTLE_AXIS, -TRPCOMBO);
+	}
+	
+	//Map the MODE_FILTERED TFRP through Target; we can Trim, set deadzones, J/Scurves, etc.
+	if (&o == &TFRPRudder) {  
+		GetAxisData(&o, x);
+		axdata.val = AxisVal(o[x], &axdata);
+		if(x == TRPLEFT | x == TRPRIGHT) axdata.val = -axdata.val;  //Reverse the Toe Brakes, TM why u do dis??
+		//axdata.locked = 1;                                        //Uncomment to disable pedals but keep TRPCOMBO axis
+		if(!axdata.locked & !axdata.relative) GameOutput(&o, x, axdata.val);
+		
 	}
 	else DefaultMapping(&o, x);
 }
