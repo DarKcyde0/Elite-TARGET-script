@@ -2,6 +2,7 @@ include "target.tmh" // Default system import
 include "usb_keys.tmh" //USB Keycodes
 include "EDKeyMap.ttm" // Key mapping
 include "EDMacros.tmh" // Macros definition
+include "SquareTheCircle.tmh"  //Joystick corner deadzone
 
 define HOLD 350 // milliseconds
 define JETTISON_CARGO_DELAY 2500 // milliseconds, recommend 2-3 seconds.
@@ -215,5 +216,11 @@ int EventHandle(int type, alias o, int x) {
 		if(!axdata.locked & !axdata.relative) GameOutput(&o, x, axdata.val);
 		
 	}
+	
+	//SquareTheCircle Joystick code
+	if (&o == &Joystick & (x == JOYX | x == JOYY)) {
+		SquareTheCircle(&o, x, JOYX, JOYY);
+	}
+
 	else DefaultMapping(&o, x);
 }

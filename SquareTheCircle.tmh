@@ -1,0 +1,48 @@
+int sign(float x)  //sgn func is int only, need one for float
+{
+if (x > 0) return 1;
+if (x < 0) return -1;
+return 0;
+}
+
+//SquareTheCircle by DarKcyde
+//squircular.blogspot.ca/2015/09/elliptical-arc-mapping.html
+//arxiv.org/ftp/arxiv/papers/1509/1509.06344.pdf
+//Simple Stretching formula from the paper
+
+int SquareTheCircle(alias dev, int ax, int x, int y)
+{
+	float newx, newy;
+	float u = dev[x] / 32767.0;
+	float v = dev[y] / 32767.0;
+	
+	float u2 = u * u;
+	float v2 = v * v;
+	float r = sqrt(u2 + v2);
+	if (u2 >= v2) {
+		newx = sign(u) * r;
+		if (u) {  //catch divide by zero
+			newy = sign(u) * v/u * r;
+		}
+		else newy = v;
+	}
+	else if(u2 < v2) {
+		if (v) {  //catch divide by zero
+			newx = sign(v) * u/v * r;
+		}
+		else newx = u;
+		newy = sign(v) * r;
+	}
+	
+
+	GetAxisData(&dev, ax);
+	if (ax == JOYX) {
+		axdata.val = clip(newx * 32767.0, -AMAX, AMAX);
+	}
+	if (ax == JOYY) {
+		axdata.val = clip(newy * 32767.0, -AMAX, AMAX);
+	}
+	if(!!axdata.dxmap & !axdata.locked & !axdata.relative) DXAxis(axdata.dxmap, axdata.val);
+}
+
+
