@@ -33,8 +33,8 @@ int main() {
 	initCustomCommands();
 	initJoystickAxis();
 	initThrottleAxis();
-
-	// =======================================================================================
+	
+	// =========================================================================-==============
 	// Map joystick
 	// =======================================================================================
 	MapKey(&Joystick, TG1, DX1);
@@ -105,8 +105,8 @@ int main() {
 	//CMS
 	MapKey(&Joystick, H4U, UIUp);
 	MapKey(&Joystick, H4D, UIDown);
-	MapKeyIO(&Joystick, H4L, UIPrevPanel, TEMPO(UILeft, PULSE+UIPrevPanel, HOLD));
-	MapKeyIO(&Joystick, H4R, UINextPanel, TEMPO(UIRight, PULSE+UINextPanel, HOLD));
+	MapKeyIO(&Joystick, H4L, UIPrevPanel, UILeft);
+	MapKeyIO(&Joystick, H4R, UINextPanel, UIRight);
 	MapKeyIO(&Joystick, H4P, UIBack, TEMPO(UISelect, PULSE+UIBack, HOLD));
 
 	// =======================================================================================
@@ -133,8 +133,9 @@ int main() {
 	MapKey(&Throttle, PSM, mThrottleFullScale);
 	MapKey(&Throttle, PSB, mThrottlePrecision);
 
-	MapKey(&Throttle, LTB, EXEC("if (!Throttle[PSB]) ActKey(KEYON+PULSE+EngineBoost);")); //Dont boost when landing/precise maneouvers
-
+	MapKey(&Throttle, LTB, EXEC("if (!Throttle[PSB]) ActKey(KEYON+EngineBoost);")); //Dont boost when landing/precise maneouvers
+	MapKeyR(&Throttle, LTB, UP+EngineBoost);
+	
 	MapKey(&Throttle, SC, TEMPO(PULSE+SelectNextSystemInRoute, BuggyEbrake, HOLD)); 
 
 	MapKeyIO(&Throttle, CSU, TargetWingmans_Target, TEMPO(PULSE+SelectPrevSubsystem, mPowerPlant, HOLD));
@@ -142,7 +143,8 @@ int main() {
 	MapKeyIO(&Throttle, CSL, TargetWingman3, PULSE+SelectPrevShip);
 	MapKeyIO(&Throttle, CSR, TargetWingman1, PULSE+SelectNextShip);
 
-	MapKey(&Throttle, IDLELON, TEMPO(0, mSplitThrottle, HOLD));  //Needs delay, prevents accidental usage, give time for both throttles to idle.
+	
+	MapKey(&Throttle, IDLELON, TEMPO(0, mSplitThrottle, HOLD));  //Needs delay, prevents accidental engagement.
 	MapKey(&Throttle, IDLELOFF, 0);
 	MapKey(&Throttle, IDLERON, BuggyEbrake);
 	MapKey(&Throttle, IDLEROFF, 0);
@@ -151,18 +153,19 @@ int main() {
 	MapKeyR(&Throttle, EFLNORM, PULSE+PhotoCamera);
 	MapKey(&Throttle, EFLOVER, 0);
 	
-	MapKey(&Throttle, EFRNORM, 0);
-	MapKey(&Throttle, EFROVER, 0);
+	MapKey(&Throttle, EFRNORM, PULSE+ F8);  //Autohotkey activates Bigscreen
+	MapKey(&Throttle, EFROVER, PULSE+ F9); //Autohotkey activates Elite
 
-	MapKey(&Throttle, EOLIGN, USB_VOLUMEUP);
+	MapKey(&Throttle, EOLIGN, 0);
 	MapKey(&Throttle, EOLNORM, 0);
-	MapKey(&Throttle, EOLMOTOR, USB_VOLUMEDOWN);
+	MapKey(&Throttle, EOLMOTOR, 0);
 	MapKey(&Throttle, EORIGN, mRequestDock); // Press up when full throttle!
 	MapKey(&Throttle, EORNORM, 0);
 	MapKey(&Throttle, EORMOTOR, 0);
 
-	MapKey(&Throttle, APUON, TEMPO(0, PULSE+JettisonAllCargo, JETTISON_CARGO_DELAY));  // Must hold for 2-3 sec
-	MapKey(&Throttle, APUOFF, 0);
+	//MapKey(&Throttle, APUON, TEMPO(0, PULSE+JettisonAllCargo, JETTISON_CARGO_DELAY));  //Hold to prevent accidents
+	MapKey(&Throttle, APUON, PULSE+ F8);  //Autohotkey activates Bigscreen
+	MapKey(&Throttle, APUOFF, PULSE+ F9); //Autohotkey activates Elite
 
 	MapKey(&Throttle, FLAPU, PULSE+ShipLights);
 	MapKey(&Throttle, FLAPM, PULSE+ShipLights);
@@ -191,8 +194,11 @@ int EngageAPkey() {
 	if (Throttle[APALT]) ActKey(KEYON+PULSE+ Screenshot);
 }
 
+
+
+
 int EventHandle(int type, alias o, int x) {
-	int LED_BRT, TRPCOMBO;
+	int LED_BRT, TRPCOMBO, Differential_Toe;
 
 	// LED backlight control - press S3 + THR_FC axis.
 	if (&o == &Throttle & x == THR_FC & Joystick[S3]) {
@@ -201,20 +207,28 @@ int EventHandle(int type, alias o, int x) {
 	}
 	
 	// Combine rudder toe brakes into new axis, mapped to DX_THROTTLE_AXIS
-	if (&o == &TFRPRudder & (x == TRPLEFT | x == TRPRIGHT)) {
-		if (TFRPRudder[TRPLEFT] < TFRPRudder[TRPRIGHT]) TRPCOMBO = TFRPRudder[TRPRIGHT];
-		else TRPCOMBO = TFRPRudder[TRPLEFT];
-		DXAxis (DX_THROTTLE_AXIS, -TRPCOMBO);
-	}
+//	if (&o == &TFRPRudder & (x == TRPLEFT | x == TRPRIGHT)) {
+//		if (TFRPRudder[TRPLEFT] < TFRPRudder[TRPRIGHT]) TRPCOMBO = TFRPRudder[TRPRIGHT];
+//		else TRPCOMBO = TFRPRudder[TRPLEFT];
+//		GameOutput (&o, TRPLEFT, -TRPCOMBO);
+//	}
 	
 	//Map the MODE_FILTERED TFRP through Target; we can Trim, set deadzones, J/Scurves, etc.
 	if (&o == &TFRPRudder) {  
 		GetAxisData(&o, x);
 		axdata.val = AxisVal(o[x], &axdata);
-		if(x == TRPLEFT | x == TRPRIGHT) axdata.val = -axdata.val;  //Reverse the Toe Brakes, TM why u do dis??
-		//axdata.locked = 1;                                        //Uncomment to disable pedals but keep TRPCOMBO axis
+		//if(x == TRPLEFT | x == TRPRIGHT) axdata.val = -axdata.val;  //Reverse the Toe Brakes, TM why u do dis??
+		if(x == TRPLEFT | x == TRPRIGHT) {
+			axdata.locked = 1;
+			Differential_Toe = -TFRPRudder[TRPRIGHT]/2 + TFRPRudder[TRPLEFT]/2;
+			GameOutput(&o, TRPRIGHT, Differential_Toe);
+			
+			if (TFRPRudder[TRPLEFT] < TFRPRudder[TRPRIGHT]) TRPCOMBO = TFRPRudder[TRPRIGHT];
+			else TRPCOMBO = TFRPRudder[TRPLEFT];
+			GameOutput (&o, TRPLEFT, -TRPCOMBO);
+		}
+		//axdata.locked = 1;  //Uncomment to disable pedals but keep TRPCOMBO axis
 		if(!axdata.locked & !axdata.relative) GameOutput(&o, x, axdata.val);
-		
 	}
 	
 	//SquareTheCircle Joystick code
