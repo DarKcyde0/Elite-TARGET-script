@@ -1,0 +1,15 @@
+#SingleInstance Force
+^F1::
+IfWinNotExist, BigScreen
+{
+	Run steam://rungameid/457550
+}
+else 
+{
+	WinActivate, BigScreen
+}
+return
+
+^F2::
+WinActivate, Elite - Dangerous (CLIENT)
+return

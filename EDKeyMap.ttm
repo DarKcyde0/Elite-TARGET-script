@@ -2,7 +2,7 @@
 //See usb_keys.tmh for key list
 
 // Weapons
-define PrimaryFire MOUSE_LEFT
+define PrimaryFire USB_KP0
 define SecondaryFire MOUSE_RIGHT
 define NextFireGroup USB_N // N
 define PrevFireGroup L_SHIFT+USB_N // Shift-N

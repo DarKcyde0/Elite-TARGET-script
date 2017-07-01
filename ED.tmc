@@ -6,6 +6,7 @@ include "SquareTheCircle.tmh"  //Joystick corner deadzone
 
 define HOLD 350 // milliseconds
 define JETTISON_CARGO_DELAY 2500 // milliseconds, recommend 2-3 seconds.
+define RAPIDFIRE_TIME 145  // tweak to your Frag cannon ROF
 
 // Init vars
 int TriggerWEP;
@@ -13,13 +14,13 @@ int TriggerWEP;
 int main() {
 	
 	// Exclude missing devices
-	Configure(&HCougar, MODE_EXCLUDED);
-	Configure(&T16000, MODE_EXCLUDED);
-	Configure(&T16000L, MODE_EXCLUDED);
-	Configure(&LMFD, MODE_EXCLUDED);
-	Configure(&RMFD, MODE_EXCLUDED);
-	Configure(&TWCSThrottle, MODE_EXCLUDED);
-	Configure(&TFRPRudder, MODE_FILTERED); //Change to MODE_FILTERED for binding conflicts.
+	Exclude(&HCougar);
+	Exclude(&T16000);
+	Exclude(&T16000L);
+	Exclude(&LMFD);
+	Exclude(&RMFD);
+	Exclude(&TWCSThrottle);
+	Configure(&TFRPRudder, MODE_FILTERED); // Enabled but filtered through EventHandle.
 
 	if(Init(&EventHandle)) return 1;
 
@@ -29,20 +30,19 @@ int main() {
 	ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 43)); // Init LEDs, 0, 43, 86, 129, 172, 215
 	SetShiftButton(&Joystick, S3, &Throttle, BSF, BSB); // Pinky for IO, Boat switch for UMD
 
-	// Init
+	// Init see EDMacros.tmh
 	initCustomCommands();
 	initJoystickAxis();
 	initThrottleAxis();
 	
-	// =========================================================================-==============
+	// =======================================================================================
 	// Map joystick
 	// =======================================================================================
-	MapKey(&Joystick, TG1, DX1);
-	MapKeyUMD(&Joystick, TG2,     //Squeeze to intensify forward fire power
-		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,ENG); }" ), //U
-		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP); }" ),     //M
-		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,SYS); }" )  //D
-		);  
+	if (Throttle[APPAT]) EXEC("TG1_AutoRepeat();");
+	else EXEC("TG1_Norm();");
+	
+	if (Throttle[APALT]) EXEC("TG2_Pwr();");
+	
 	MapKeyRUMD(&Joystick, TG1,   //On Trigger release, check if TG2 pressed, redirect power to engines
 		EXEC("if (TriggerWEP) { TriggerWEP = 0; mPower(ENG,WEP); }"),  //U
 		EXEC("if (TriggerWEP) { TriggerWEP = 0; mPower(ENG); }"),      //M
@@ -50,33 +50,35 @@ int main() {
 		);
 	
 	//Mode 
-	MapKey(&Joystick, S1, TEMPO(NextFireGroup, PrevFireGroup, HOLD));
+	MapKeyIO(&Joystick, S1, 0, TEMPO(NextFireGroup, PrevFireGroup, HOLD)
+	);
+		
 	//Pickle 
-	MapKey(&Joystick, S2, TEMPO(Chaff, PULSE+UseShieldCell, HOLD));
+	MapKeyIO(&Joystick, S2, mFastModeSwitch, TEMPO(Chaff, PULSE+UseShieldCell, HOLD));
 	//Pinky/Nose-wheel
-	MapKey(&Joystick, S3, TEMPO(DisableFlightAssist, 0));  // IO shift on hold
+	MapKey(&Joystick, S3, TEMPO(DisableFlightAssist, 0));  // Tap for FA Off, IO shift on hold
 	//Paddle switch
 	MapKey(&Joystick, S4, DX2);  // Holding Pickle for 2ndary fire is painful, the paddle is much easier.
 
 	// China hat power control
-	// Shift or hold always sends single power press
-	// UMD mode changes 2ndary power balance. U = attack, M = balanced, D = defence/run
+	// Shift always sends single power press
+	// Boat switch - UMD mode changes 2ndary power balance. U = offence, M = balanced, D = defence/retreat
 	MapKeyIOUMD(&Joystick, H1U, 
 		PULSE+PowerEng, //I U 
 		TEMPO(EXEC("mPower(ENG,WEP);"), PULSE+PowerEng, HOLD), //O U 
 		PULSE+PowerEng, //I M  
-		TEMPO(EXEC("mPower(ENG);"), PULSE+PowerEng, HOLD), //O M 
+		TEMPO(EXEC("mPower(ENG);"),  EXEC("mPower(ENG,SYS,MID);"), HOLD), //O M 
 		PULSE+PowerEng, //I D 
 		TEMPO(EXEC("mPower(ENG,SYS);"), PULSE+PowerEng, HOLD) //O D
 		); 
 		
-	MapKey(&Joystick, H1D, PULSE+BalancePower);
+	MapKey(&Joystick, H1D, TEMPO(BalancePower, EXEC("mPower(WEP,SYS,MID);"), HOLD));
 	
 	MapKeyIOUMD(&Joystick, H1L, 
 		PULSE+PowerSys, //I U 
 		TEMPO(EXEC("mPower(SYS,WEP);"), PULSE+PowerSys, HOLD), //O U 
 		PULSE+PowerSys, //I M  
-		TEMPO(EXEC("mPower(SYS);"), PULSE+PowerSys, HOLD), //O M 
+		TEMPO(EXEC("mPower(SYS);"),  EXEC("mPower(SYS,ENG,MID);"), HOLD), //O M 
 		PULSE+PowerSys, //I D 
 		TEMPO(EXEC("mPower(SYS,ENG);"), PULSE+PowerSys, HOLD) //O D
 		); 
@@ -85,18 +87,18 @@ int main() {
 		PULSE+PowerWep, //I U 
 		TEMPO(EXEC("mPower(WEP,ENG);"), PULSE+PowerWep, HOLD), //O U 
 		PULSE+PowerWep, //I M  
-		TEMPO(EXEC("mPower(WEP);"), PULSE+PowerWep, HOLD), //O M 
+		TEMPO(EXEC("mPower(WEP);"),  EXEC("mPower(WEP,ENG,MID);"), HOLD), //O M 
 		PULSE+PowerWep, //I D 
 		TEMPO(EXEC("mPower(WEP,SYS);"), PULSE+PowerWep, HOLD) //O D
 		); 
 	
 	//TMS
-	MapKey(&Joystick, H2U, TEMPO(PULSE+SelectTargetAhead, PULSE+SelectHighestThreat, HOLD));
-	MapKey(&Joystick, H2D, PULSE+SelectHighestThreat);
-	MapKeyIO(&Joystick, H2L, PULSE+SelectPrevShip, PULSE+SelectPrevHostileShip);
-	MapKeyIO(&Joystick, H2R, PULSE+SelectNextShip, PULSE+SelectNextHostileShip);
+	MapKey(&Joystick, H2U, SelectTargetAhead);
+	MapKey(&Joystick, H2D, SelectHighestThreat);
+	MapKeyIO(&Joystick, H2L, SelectPrevShip, SelectPrevHostileShip);
+	MapKeyIO(&Joystick, H2R, SelectNextShip, SelectNextHostileShip);
 
-	//DMS
+	//DMS Castle hat
 	MapKey(&Joystick, H3U, TEMPO(PULSE+CommsPanel, PULSE+QuickCommsPanel, HOLD));
 	MapKey(&Joystick, H3D, TEMPO(PULSE+SensorPanel, PULSE+UIEscape, HOLD));
 	MapKey(&Joystick, H3L, TEMPO(PULSE+TargetPanel, PULSE+SystemMap, HOLD));
@@ -107,7 +109,7 @@ int main() {
 	MapKey(&Joystick, H4D, UIDown);
 	MapKeyIO(&Joystick, H4L, UIPrevPanel, UILeft);
 	MapKeyIO(&Joystick, H4R, UINextPanel, UIRight);
-	MapKeyIO(&Joystick, H4P, UIBack, TEMPO(UISelect, PULSE+UIBack, HOLD));
+	MapKeyIO(&Joystick, H4P, UIBack, TEMPO(UISelect, PULSE+UIFocus, HOLD));
 
 	// =======================================================================================
 	// Map throttle
@@ -118,8 +120,8 @@ int main() {
 	MapKey(&Throttle, MSR, ThrustRight);
 	MapKey(&Throttle, MSP, Microphone);
 
-	MapKey(&Throttle, SPDF, PULSE+DeployHardpoints);  //Hardpoints and FSD mutually exclusive, good for same switch
-	MapKeyR(&Throttle, SPDF, PULSE+DeployHardpoints);
+	MapKeyIO(&Throttle, SPDF, 0, PULSE+DeployHardpoints);  //Hardpoints and FSD mutually exclusive, good for same switch
+	MapKeyRIO(&Throttle, SPDF, 0, PULSE+DeployHardpoints);  //shift disables if out of sync
 	MapKeyIO(&Throttle, SPDB, WingNavLock, TEMPO(PULSE+ FrameShiftDrive, Supercruise, HOLD)); // When FSD target is blocked, Hold for Supercruise
 
 	MapKey(&Throttle, BSF, 0); //UMD switch
@@ -129,11 +131,11 @@ int main() {
 	MapKey(&Throttle, CHF, SilentRunning);
 	MapKey(&Throttle, CHB, PULSE+DeployHeatSink);
 
-	MapKey(&Throttle, PSF, mThrottleFwdOnly);
-	MapKey(&Throttle, PSM, mThrottleFullScale);
-	MapKey(&Throttle, PSB, mThrottlePrecision);
+	MapKey(&Throttle, PSF, PULSE+ShipLights); 
+	MapKey(&Throttle, PSM, PULSE+ShipLights);
+	MapKey(&Throttle, PSB, PULSE+ShipLights);
 
-	MapKey(&Throttle, LTB, EXEC("if (!Throttle[PSB]) ActKey(KEYON+EngineBoost);")); //Dont boost when landing/precise maneouvers
+	MapKey(&Throttle, LTB, EXEC("if (!Throttle[FLAPD]) ActKey(KEYON+EngineBoost);")); //Dont boost when landing/precise maneouvers
 	MapKeyR(&Throttle, LTB, UP+EngineBoost);
 	
 	MapKey(&Throttle, SC, TEMPO(PULSE+SelectNextSystemInRoute, BuggyEbrake, HOLD)); 
@@ -167,14 +169,14 @@ int main() {
 	MapKey(&Throttle, APUON, PULSE+ F8);  //Autohotkey activates Bigscreen
 	MapKey(&Throttle, APUOFF, PULSE+ F9); //Autohotkey activates Elite
 
-	MapKey(&Throttle, FLAPU, PULSE+ShipLights);
-	MapKey(&Throttle, FLAPM, PULSE+ShipLights);
-	MapKey(&Throttle, FLAPD, PULSE+ShipLights);
+	MapKey(&Throttle, FLAPU, mThrottleFwdOnly);
+	MapKey(&Throttle, FLAPM, mThrottleFullScale);
+	MapKey(&Throttle, FLAPD, mThrottlePrecision);
 
 	MapKey(&Throttle, LDGH, HMDReset);
 
-	MapKey(&Throttle, EACON, PULSE+LandingGear);
-	MapKey(&Throttle, EACOFF, PULSE+LandingGear);
+	MapKeyIO(&Throttle, EACON, 0, PULSE+LandingGear);  //shift disables if out of sync
+	MapKeyIO(&Throttle, EACOFF, 0, PULSE+LandingGear);
 
 	MapKey(&Throttle, RDRNRM, 0);
 	MapKey(&Throttle, RDRDIS, CargoScoop);
@@ -182,20 +184,45 @@ int main() {
 	MapKey(&Throttle, APENG, EXEC("EngageAPkey();"));
 	MapKey(&Throttle, APDIS, 0);
 
-	MapKey(&Throttle, APPAT, 0);  //Mode select for APENG
-	MapKey(&Throttle, APAH, 0);
-	MapKey(&Throttle, APALT, 0);
-}
+	MapKey(&Throttle, APPAT, EXEC("TG1_AutoRepeat();"));  //Mode select for APENG
+	MapKey(&Throttle, APAH, EXEC("TG1_Norm();"));
+	MapKey(&Throttle, APALT, EXEC("TG2_Pwr();"));
+	
+	//must do this inside main()
+    SetSCurve(&TFRPRudder, TRPRIGHT, 0, 0, 20, 0, 0); //Right Toe Brake
+    SetSCurve(&TFRPRudder, TRPLEFT, 0, 0, 20, 0, 0); //Left Toe Brake
+
+}  // end main()
+
+
+	// =======================================================================================
+	// Functions
+	// =======================================================================================
 
 	// Autopilot Engage button depends on LASTE position
 int EngageAPkey() {
 	if (Throttle[APPAT]) ActKey(KEYON+PULSE+ HUD);
-	if (Throttle[APAH]) ActKey(KEYON+PULSE+ OrbitLines);
-	if (Throttle[APALT]) ActKey(KEYON+PULSE+ Screenshot);
+	else if (Throttle[APAH]) ActKey(KEYON+PULSE+ OrbitLines);
+	else if (Throttle[APALT]) ActKey(KEYON+PULSE+ Screenshot);
 }
 
+int TG1_Norm() {
+	MapKey(&Joystick, TG1, DX1);
+	MapKey(&Joystick, TG2, 0);
+}
 
+int TG1_AutoRepeat() {
+	MapKey(&Joystick, TG1, REXEC(10, RAPIDFIRE_TIME, "ActKey(KEYON+PULSE+DX1);")); 
+}
 
+int TG2_Pwr() {
+	MapKeyUMD(&Joystick, TG2,   //Squeeze to intensify forward fire power
+		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,ENG); }" ), //U
+		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP); }" ),     //M
+		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,SYS); }" )  //D
+		);  
+	
+}
 
 int EventHandle(int type, alias o, int x) {
 	int LED_BRT, TRPCOMBO, Differential_Toe;
@@ -206,7 +233,7 @@ int EventHandle(int type, alias o, int x) {
 		ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, LED_BRT));
 	}
 	
-	// Combine rudder toe brakes into new axis, mapped to DX_THROTTLE_AXIS
+	// Old Combine rudder toe brakes into new axis, mapped to DX_THROTTLE_AXIS
 //	if (&o == &TFRPRudder & (x == TRPLEFT | x == TRPRIGHT)) {
 //		if (TFRPRudder[TRPLEFT] < TFRPRudder[TRPRIGHT]) TRPCOMBO = TFRPRudder[TRPRIGHT];
 //		else TRPCOMBO = TFRPRudder[TRPLEFT];
@@ -214,6 +241,9 @@ int EventHandle(int type, alias o, int x) {
 //	}
 	
 	//Map the MODE_FILTERED TFRP through Target; we can Trim, set deadzones, J/Scurves, etc.
+	//X axis = Differential combined toe brakes, rest at center
+	//Y axis = Both toe brakes pressed at same time, rest at 0
+	//Z axis = rudder (as default)
 	if (&o == &TFRPRudder) {  
 		GetAxisData(&o, x);
 		axdata.val = AxisVal(o[x], &axdata);
@@ -221,10 +251,12 @@ int EventHandle(int type, alias o, int x) {
 		if(x == TRPLEFT | x == TRPRIGHT) {
 			axdata.locked = 1;
 			Differential_Toe = -TFRPRudder[TRPRIGHT]/2 + TFRPRudder[TRPLEFT]/2;
+			//Differential_Toe = AxisVal(Differential_Toe, &axdata);
 			GameOutput(&o, TRPRIGHT, Differential_Toe);
 			
 			if (TFRPRudder[TRPLEFT] < TFRPRudder[TRPRIGHT]) TRPCOMBO = TFRPRudder[TRPRIGHT];
 			else TRPCOMBO = TFRPRudder[TRPLEFT];
+			TRPCOMBO = AxisVal(TRPCOMBO, &axdata);
 			GameOutput (&o, TRPLEFT, -TRPCOMBO);
 		}
 		//axdata.locked = 1;  //Uncomment to disable pedals but keep TRPCOMBO axis

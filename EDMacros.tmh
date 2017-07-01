@@ -1,12 +1,8 @@
 // Init vars used in script
-int mRequestDock, mPowerPlant;
+int mRequestDock, mPowerPlant, mFastModeSwitch;
 int mThrottleFwdOnly, mThrottleFullScale, mThrottlePrecision, mSplitThrottle;
 int split = 0;  //Flag for mSplitThrottle
 int LED_BAR_0, LED_BAR_1, LED_BAR_2, LED_BAR_3, LED_BAR_4, LED_BAR_5;
-
-int SetThrottle() {  //Prevents throttle jumping around on mode change
-	DXAxis(DX_Z_AXIS, -AxisVal(Throttle[THR_RIGHT], &axdata));
-}
 
 
 //SetSCurve(&Device, axis, left_deadzone%, center_deadzone%, right_deadzone%, curve(-20...20), scale);
@@ -14,14 +10,18 @@ int SetThrottle() {  //Prevents throttle jumping around on mode change
 //TrimDXAxis(axis, +/-1024) trim is additive, SET forces trim value, CURRENT reads axis.pos
 
 int initJoystickAxis() {
-	MapAxis(&Joystick, JOYX, DX_X_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+	MapAxis(&Joystick, JOYX, DX_X_AXIS);
 		SetSCurve(&Joystick, JOYX, 0, 0, 0, 0, 0);
-	MapAxis(&Joystick, JOYY, DX_Y_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+	MapAxis(&Joystick, JOYY, DX_Y_AXIS);
 		SetSCurve(&Joystick, JOYY, 0, 0, 0, 0, 0);
 }
 
+int SetThrottle() {  //Prevents throttle jumping around on mode change
+	DXAxis(DX_Z_AXIS, -AxisVal(Throttle[THR_RIGHT], &axdata));
+}
+
 int initThrottleAxis() {
-//	LED Backlight Control
+//	LED Backlight Control - AXMAP2 method
 //	int LED_BRT_OFF, LED_BRT_1, LED_BRT_2, LED_BRT_3, LED_BRT_4, LED_BRT_5;
 //	LED_BRT_OFF = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 0));");
 //	LED_BRT_1 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 64));");
@@ -33,7 +33,7 @@ int initThrottleAxis() {
 	//KeyAxis (&Throttle, THR_FC, 'i', 
 	//	AXMAP2(6, LED_BRT_5, LED_BRT_4, LED_BRT_3, LED_BRT_2, LED_BRT_1, LED_BRT_OFF));
 	
-	// LED bar on throttle, for giggles/show off.
+	// LED bar on throttle, for giggles
 	LED_BAR_0 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_ONOFF, LED_CURRENT-LED1-LED2-LED3-LED4-LED5));");
 	LED_BAR_1 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_ONOFF, LED_CURRENT-LED1-LED2-LED3-LED4+LED5));");
 	LED_BAR_2 = EXEC("ActKey(PULSE+KEYON+LED (&Throttle, LED_ONOFF, LED_CURRENT-LED1-LED2-LED3+LED4+LED5));");
@@ -43,23 +43,25 @@ int initThrottleAxis() {
 //	KeyAxis (&Throttle, THR_RIGHT, 'ioumd', 
 //		AXMAP2(6, LED_BAR_0, LED_BAR_1,	LED_BAR_2, LED_BAR_3, LED_BAR_4, LED_BAR_5)	);
 		
-	MapAxis(&Throttle, SCX, DX_XROT_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
-		SetSCurve(&Throttle, SCX, 0, 0, 0, 4, 0);
-	MapAxis(&Throttle, SCY, DX_YROT_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+	MapAxis(&Throttle, THR_RIGHT, DX_Z_AXIS, AXIS_REVERSED);
+	//configure throttle on Flap switch position
+	if(Throttle[FLAPU]) EXEC("mThrottleFwdOnly");
+	else if(Throttle[FLAPM]) EXEC("mThrottleFullScale");
+	else EXEC("mThrottlePrecision");
+	MapAxis(&Throttle, SCX, DX_XROT_AXIS);
+		SetSCurve(&Throttle, SCX, 0, 0, 0, 4, 0);						//curve to tame the twitchy slew
+	MapAxis(&Throttle, SCY, DX_YROT_AXIS);
 		SetSCurve(&Throttle, SCY, 0, 0, 0, 4, 0);
-	MapAxis(&Throttle, THR_RIGHT, DX_Z_AXIS, AXIS_REVERSED, MAP_ABSOLUTE);
-		TrimDXAxis(DX_Z_AXIS, SET(1024));
-		SetSCurve(&Throttle, THR_RIGHT, 0, -100, 0, 0, 0);
-		SetThrottle();
-	//MapAxis(&Throttle, THR_LEFT, DX_ZROT_AXIS, AXIS_REVERSED, MAP_ABSOLUTE);
-		SetSCurve(&Throttle, THR_LEFT, 0, 0, 0, 0, 0);
-	MapAxis(&Throttle, THR_FC, DX_SLIDER_AXIS, AXIS_NORMAL, MAP_ABSOLUTE);
+	//MapAxis(&Throttle, THR_LEFT, DX_ZROT_AXIS, AXIS_REVERSED);
+		SetSCurve(&Throttle, THR_LEFT, 0, 10, 0, 0, 0);					//deadzone for bidirectional heave control
+	MapAxis(&Throttle, THR_FC, DX_SLIDER_AXIS);
 		SetSCurve(&Throttle, THR_FC, 0, 0, 0, 0, 0);
 
 }
 
 
 int initCustomCommands() {
+	
 	// Dock request
 	mRequestDock = CHAIN(
 		LOCK+PULSE+TargetPanel, D(),
@@ -72,6 +74,18 @@ int initCustomCommands() {
 		PULSE+UIPrevPanel, D(),
 		PULSE+UIBack, LOCK
 	);
+	
+
+	mFastModeSwitch = CHAIN(				// MACRO: Automated Game Mode Switching
+		LOCK+PULSE+UIEscape, D(700),		// From Cockpit, it will navigate the Game Menu to put you back at the Game Mode selection screen automatically!
+		PULSE+UIUp, D(400),
+		PULSE+UIUp, D(400),
+		PULSE+UISelect, D(500),
+		PULSE+UIRight, D(250),
+		PULSE+UISelect, D(5000),			// ** Depending on the load times of your PC, this value may need to be changed/increased (6000ms is default)
+		PULSE+UIDown, D(500),
+		PULSE+UISelect, LOCK
+	);	
 
 	// SelectPrevSubsystem x 6 (Targets Powerplant, or close to it)
 	mPowerPlant = CHAIN(
@@ -79,8 +93,8 @@ int initCustomCommands() {
 		PULSE+SelectPrevSubsystem, D(),
 		PULSE+SelectPrevSubsystem, D(),
 		PULSE+SelectPrevSubsystem, D(),
-		PULSE+SelectPrevSubsystem, D(),
-		PULSE+SelectPrevSubsystem
+		PULSE+SelectPrevSubsystem, D()
+		//PULSE+SelectPrevSubsystem
 	);
 
 	// Trim first 50% of throttle movement
@@ -89,7 +103,7 @@ int initCustomCommands() {
 		"SetSCurve(&Throttle, THR_RIGHT, 0, -100, 0, 0);"
 		"SetThrottle();"
 	);
-	// Make throttle liniar and full scale
+	// Make throttle bi-directional, linear
 	mThrottleFullScale = EXEC(
 		"TrimDXAxis(DX_Z_AXIS, SET(0));"
 		"SetSCurve(&Throttle, THR_RIGHT, 0, 5, 0, 0);"
@@ -102,6 +116,7 @@ int initCustomCommands() {
 		"SetThrottle();"
 	);
 	// Map Left Throttle to ThrustUp/Dn (toggle)
+	// Separate throttles and move Left thr only to idle for toggle.
 	mSplitThrottle = EXEC(
 		"if (Throttle[IDLELON] & Throttle[IDLEROFF]) {"  //Check that only Left Thr is IDLE
 			"if (!split) {"
@@ -115,38 +130,43 @@ int initCustomCommands() {
 }
 
 // =======================================================================================
-// mPower sets PIPs as requested
-// Params = SYS, ENG, WEP
-// 1st Param gets 4 PIPs
-// 2nd Param gets 2 PIPs
-// If no 2nd param, balanced 1 PIP on each 2ndary power
+// mPower() sets PIPs as requested
+// Params = SYS, ENG, WEP, MID
 // If no params, balances power.
+// 1st Param gets 4 PIPs, balanced 1 PIP on others if no 2nd param
+// 2nd Param gets 2 PIPs
+// 3rd Param MID sets 3 PIPs each
 // =======================================================================================
 define SYS 1
 define ENG 2
 define WEP 3
+define MID 4
 
-int mPower(int x=0, int y=0) {
-	int PIPfull, PIPhalf;
+int mPower(int x=0, int y=0, int z=0) {
+	int PIPx, PIPy, PIPz;
 	
 	// Map out PIPs
-	if (x == 0) PIPfull = 0;
-	else if (x == SYS) PIPfull = PULSE+ PowerSys;
-	else if (x == ENG) PIPfull = PULSE+ PowerEng;
-	else if (x == WEP) PIPfull = PULSE+ PowerWep;
+	if (x == 0) PIPx = 0;
+	else if (x == SYS) PIPx = PULSE+ PowerSys;
+	else if (x == ENG) PIPx = PULSE+ PowerEng;
+	else if (x == WEP) PIPx = PULSE+ PowerWep;
 	
 	
-	if (y == 0) PIPhalf = 0;
-	else if (y == SYS) PIPhalf = PULSE+ PowerSys;
-	else if (y == ENG) PIPhalf = PULSE+ PowerEng;
-	else if (y == WEP) PIPhalf = PULSE+ PowerWep;
+	if (y == 0) PIPy = 0;
+	else if (y == SYS) PIPy = PULSE+ PowerSys;
+	else if (y == ENG) PIPy = PULSE+ PowerEng;
+	else if (y == WEP) PIPy = PULSE+ PowerWep;
+	
+	if (z == 0) PIPz = 0;
+	else if (z == MID) PIPz = PIPy;
 		
 	// Send PIPs
 	ActKey(KEYON+ CHAIN(
 		PULSE+ BalancePower, D(),
-		PIPfull, D(),
-		PIPhalf, D(),
-		PIPfull, D(),
-		PIPfull
+		PIPx, D(),
+		PIPy, D(),
+		PIPx, D(),
+		PIPx, D(),
+		PIPz
 	));
 }
