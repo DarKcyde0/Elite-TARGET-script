@@ -6,7 +6,7 @@ include "SquareTheCircle.tmh"  //Joystick corner deadzone
 
 define HOLD 350 // milliseconds
 define JETTISON_CARGO_DELAY 2500 // milliseconds, recommend 2-3 seconds.
-define RAPIDFIRE_TIME 145  // tweak to your Frag cannon ROF
+define AUTOREPEAT_TIME 145  // tweak to your slowest Frag cannon 1/ROF
 
 // Init vars
 int TriggerWEP;
@@ -65,51 +65,51 @@ int main() {
 	// Boat switch - UMD mode changes 2ndary power balance. U = offence, M = balanced, D = defence/retreat
 	MapKeyIOUMD(&Joystick, H1U, 
 		PULSE+PowerEng, //I U 
-		TEMPO(EXEC("mPower(ENG,WEP);"), PULSE+PowerEng, HOLD), //O U 
+		TEMPO(EXEC("mPower(ENG,WEP);"), EXEC("mPower(ENG,SYS,MID);"), HOLD), //O U 
 		PULSE+PowerEng, //I M  
 		TEMPO(EXEC("mPower(ENG);"),  EXEC("mPower(ENG,SYS,MID);"), HOLD), //O M 
 		PULSE+PowerEng, //I D 
-		TEMPO(EXEC("mPower(ENG,SYS);"), PULSE+PowerEng, HOLD) //O D
+		TEMPO(EXEC("mPower(ENG,SYS);"), EXEC("mPower(ENG,SYS,MID);"), HOLD) //O D
 		); 
 		
 	MapKey(&Joystick, H1D, TEMPO(BalancePower, EXEC("mPower(WEP,SYS,MID);"), HOLD));
 	
 	MapKeyIOUMD(&Joystick, H1L, 
 		PULSE+PowerSys, //I U 
-		TEMPO(EXEC("mPower(SYS,WEP);"), PULSE+PowerSys, HOLD), //O U 
+		TEMPO(EXEC("mPower(SYS,WEP);"), EXEC("mPower(SYS,ENG,MID);"), HOLD), //O U 
 		PULSE+PowerSys, //I M  
 		TEMPO(EXEC("mPower(SYS);"),  EXEC("mPower(SYS,ENG,MID);"), HOLD), //O M 
 		PULSE+PowerSys, //I D 
-		TEMPO(EXEC("mPower(SYS,ENG);"), PULSE+PowerSys, HOLD) //O D
+		TEMPO(EXEC("mPower(SYS,ENG);"), EXEC("mPower(SYS,ENG,MID);"), HOLD) //O D
 		); 
 	
 	MapKeyIOUMD(&Joystick, H1R, 
 		PULSE+PowerWep, //I U 
-		TEMPO(EXEC("mPower(WEP,ENG);"), PULSE+PowerWep, HOLD), //O U 
+		TEMPO(EXEC("mPower(WEP,ENG);"), EXEC("mPower(WEP,ENG,MID);"), HOLD), //O U 
 		PULSE+PowerWep, //I M  
 		TEMPO(EXEC("mPower(WEP);"),  EXEC("mPower(WEP,ENG,MID);"), HOLD), //O M 
 		PULSE+PowerWep, //I D 
-		TEMPO(EXEC("mPower(WEP,SYS);"), PULSE+PowerWep, HOLD) //O D
+		TEMPO(EXEC("mPower(WEP,SYS);"), EXEC("mPower(WEP,ENG,MID);"), HOLD) //O D
 		); 
 	
 	//TMS
-	MapKey(&Joystick, H2U, SelectTargetAhead);
+	MapKeyIO(&Joystick, H2U, SelectNextSystemInRoute, SelectTargetAhead);
 	MapKey(&Joystick, H2D, SelectHighestThreat);
 	MapKeyIO(&Joystick, H2L, SelectPrevShip, SelectPrevHostileShip);
 	MapKeyIO(&Joystick, H2R, SelectNextShip, SelectNextHostileShip);
 
 	//DMS Castle hat
-	MapKey(&Joystick, H3U, TEMPO(PULSE+CommsPanel, PULSE+QuickCommsPanel, HOLD));
-	MapKey(&Joystick, H3D, TEMPO(PULSE+SensorPanel, PULSE+UIEscape, HOLD));
-	MapKey(&Joystick, H3L, TEMPO(PULSE+TargetPanel, PULSE+SystemMap, HOLD));
-	MapKey(&Joystick, H3R, TEMPO(PULSE+SystemPanel, PULSE+GalaxyMap, HOLD));
+	MapKey(&Joystick, H3U, TEMPO(CommsPanel, PULSE+QuickCommsPanel, HOLD));
+	MapKey(&Joystick, H3D, TEMPO(SensorPanel, PULSE+UIEscape, HOLD));
+	MapKey(&Joystick, H3L, TEMPO(TargetPanel, PULSE+SystemMap, HOLD));
+	MapKey(&Joystick, H3R, TEMPO(SystemPanel, PULSE+GalaxyMap, HOLD));
 
 	//CMS
 	MapKey(&Joystick, H4U, UIUp);
 	MapKey(&Joystick, H4D, UIDown);
 	MapKeyIO(&Joystick, H4L, UIPrevPanel, UILeft);
 	MapKeyIO(&Joystick, H4R, UINextPanel, UIRight);
-	MapKeyIO(&Joystick, H4P, UIBack, TEMPO(UISelect, PULSE+UIFocus, HOLD));
+	MapKeyIO(&Joystick, H4P, UIBack, UISelect);
 
 	// =======================================================================================
 	// Map throttle
@@ -122,7 +122,7 @@ int main() {
 
 	MapKeyIO(&Throttle, SPDF, 0, PULSE+DeployHardpoints);  //Hardpoints and FSD mutually exclusive, good for same switch
 	MapKeyRIO(&Throttle, SPDF, 0, PULSE+DeployHardpoints);  //shift disables if out of sync
-	MapKeyIO(&Throttle, SPDB, WingNavLock, TEMPO(PULSE+ FrameShiftDrive, Supercruise, HOLD)); // When FSD target is blocked, Hold for Supercruise
+	MapKeyIO(&Throttle, SPDB, WingNavLock, TEMPO(FrameShiftDrive, Supercruise, HOLD)); // When FSD target is blocked, Hold for Supercruise
 
 	MapKey(&Throttle, BSF, 0); //UMD switch
 	MapKey(&Throttle, BSM, 0);
@@ -138,12 +138,12 @@ int main() {
 	MapKey(&Throttle, LTB, EXEC("if (!Throttle[FLAPD]) ActKey(KEYON+EngineBoost);")); //Dont boost when landing/precise maneouvers
 	MapKeyR(&Throttle, LTB, UP+EngineBoost);
 	
-	MapKey(&Throttle, SC, TEMPO(PULSE+SelectNextSystemInRoute, BuggyEbrake, HOLD)); 
+	MapKeyIO(&Throttle, SC, TEMPO(SelectNextSystemInRoute, BuggyEbrake, HOLD), UIFocus); 
 
-	MapKeyIO(&Throttle, CSU, TargetWingmans_Target, TEMPO(PULSE+SelectPrevSubsystem, mPowerPlant, HOLD));
-	MapKeyIO(&Throttle, CSD, TargetWingman2, PULSE+SelectNextSubsystem);
-	MapKeyIO(&Throttle, CSL, TargetWingman3, PULSE+SelectPrevShip);
-	MapKeyIO(&Throttle, CSR, TargetWingman1, PULSE+SelectNextShip);
+	MapKeyIO(&Throttle, CSU, TargetWingmans_Target, TEMPO(SelectPrevSubsystem, mPowerPlant, HOLD));
+	MapKeyIO(&Throttle, CSD, TargetWingman2, SelectNextSubsystem);
+	MapKeyIO(&Throttle, CSL, TargetWingman3, SelectPrevShip);
+	MapKeyIO(&Throttle, CSR, TargetWingman1, SelectNextShip);
 
 	
 	MapKey(&Throttle, IDLELON, TEMPO(0, mSplitThrottle, HOLD));  //Needs delay, prevents accidental engagement.
@@ -201,18 +201,18 @@ int main() {
 
 	// Autopilot Engage button depends on LASTE position
 int EngageAPkey() {
-	if (Throttle[APPAT]) ActKey(KEYON+PULSE+ HUD);
-	else if (Throttle[APAH]) ActKey(KEYON+PULSE+ OrbitLines);
-	else if (Throttle[APALT]) ActKey(KEYON+PULSE+ Screenshot);
+	if (Throttle[APPAT]) ActKey(KEYON+ HUD);
+	else if (Throttle[APAH]) ActKey(KEYON+ OrbitLines);
+	else if (Throttle[APALT]) ActKey(KEYON+ Screenshot);
 }
 
 int TG1_Norm() {
 	MapKey(&Joystick, TG1, DX1);
-	MapKey(&Joystick, TG2, 0);
+	MapKey(&Joystick, TG2, DX2);  //Combine fire cuz what else are we gonna put on trigger?
 }
 
 int TG1_AutoRepeat() {
-	MapKey(&Joystick, TG1, REXEC(10, RAPIDFIRE_TIME, "ActKey(KEYON+PULSE+DX1);")); 
+	MapKey(&Joystick, TG1, REXEC(10, AUTOREPEAT_TIME, "ActKey(KEYON+PULSE+DX1);")); 
 }
 
 int TG2_Pwr() {
