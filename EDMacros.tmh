@@ -87,15 +87,8 @@ int initCustomCommands() {
 		PULSE+UISelect, LOCK
 	);	
 
-	// SelectPrevSubsystem x 6 (Targets Powerplant, or close to it)
-	mPowerPlant = CHAIN(
-		PULSE+SelectPrevSubsystem, D(),
-		PULSE+SelectPrevSubsystem, D(),
-		PULSE+SelectPrevSubsystem, D(),
-		PULSE+SelectPrevSubsystem, D(),
-		PULSE+SelectPrevSubsystem, D()
-		//PULSE+SelectPrevSubsystem
-	);
+	// SelectPrevSubsystem x 7 (Targets Powerplant, or close to it)
+	mPowerPlant = RPT(PULSE+SelectPrevSubsystem, 7, 28); //do not set delay to 25ms, causes weirdness with SHIFT
 
 	// Trim first 50% of throttle movement
 	mThrottleFwdOnly = EXEC(
@@ -128,6 +121,39 @@ int initCustomCommands() {
 		"}"
 	);
 }
+
+	// =======================================================================================
+	// Functions
+	// =======================================================================================
+
+	// Autopilot Engage button depends on LASTE position
+int EngageAPkey() {
+	if (Throttle[APPAT]) ActKey(KEYON+PULSE+ HUD);
+	else if (Throttle[APAH]) ActKey(KEYON+PULSE+ OrbitLines);
+	else if (Throttle[APALT]) ActKey(KEYON+PULSE+ Screenshot);
+}
+
+int TG1_Norm() {
+	MapKey(&Joystick, TG1, DX1);
+	MapKey(&Joystick, TG2, DX2);  //Combine fire cuz what else are we gonna put on trigger?
+}
+
+define AUTOREPEAT_TIME 145  // tweak to your slowest Frag cannon 1/ROF
+
+int TG1_AutoRepeat() {
+	MapKey(&Joystick, TG1, REXEC(10, AUTOREPEAT_TIME, "ActKey(KEYON+PULSE+DX1);")); 
+	MapKey(&Joystick, TG2, DX2);
+}
+
+int TG2_Pwr() {
+	MapKeyUMD(&Joystick, TG2,   //Squeeze to intensify forward fire power
+		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,ENG); }" ), //U
+		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP); }" ),     //M
+		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,SYS); }" )  //D
+		);  
+	
+}
+
 
 // =======================================================================================
 // mPower() sets PIPs as requested

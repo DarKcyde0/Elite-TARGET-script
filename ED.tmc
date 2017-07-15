@@ -6,7 +6,7 @@ include "SquareTheCircle.tmh"  //Joystick corner deadzone
 
 define HOLD 350 // milliseconds
 define JETTISON_CARGO_DELAY 2500 // milliseconds, recommend 2-3 seconds.
-define AUTOREPEAT_TIME 145  // tweak to your slowest Frag cannon 1/ROF
+
 
 // Init vars
 int TriggerWEP;
@@ -141,9 +141,9 @@ int main() {
 	MapKeyIO(&Throttle, SC, TEMPO(SelectNextSystemInRoute, BuggyEbrake, HOLD), UIFocus); 
 
 	MapKeyIO(&Throttle, CSU, TargetWingmans_Target, TEMPO(SelectPrevSubsystem, mPowerPlant, HOLD));
-	MapKeyIO(&Throttle, CSD, TargetWingman2, SelectNextSubsystem);
-	MapKeyIO(&Throttle, CSL, TargetWingman3, SelectPrevShip);
-	MapKeyIO(&Throttle, CSR, TargetWingman1, SelectNextShip);
+	MapKeyIO(&Throttle, CSD, TargetWingman2, PULSE+ SelectNextSubsystem);
+	MapKeyIO(&Throttle, CSL, TargetWingman3, PULSE+ SelectPrevShip);
+	MapKeyIO(&Throttle, CSR, TargetWingman1, PULSE+ SelectNextShip);
 
 	
 	MapKey(&Throttle, IDLELON, TEMPO(0, mSplitThrottle, HOLD));  //Needs delay, prevents accidental engagement.
@@ -165,7 +165,7 @@ int main() {
 	MapKey(&Throttle, EORNORM, 0);
 	MapKey(&Throttle, EORMOTOR, 0);
 
-	//MapKey(&Throttle, APUON, TEMPO(0, PULSE+JettisonAllCargo, JETTISON_CARGO_DELAY));  //Hold to prevent accidents
+	//MapKey(&Throttle, APUON, TEMPO(0, PULSE+JettisonAllCargo, JETTISON_CARGO_DELAY));  //Jettison Safety example
 	MapKey(&Throttle, APUON, PULSE+ F8);  //Autohotkey activates Bigscreen
 	MapKey(&Throttle, APUOFF, PULSE+ F9); //Autohotkey activates Elite
 
@@ -195,34 +195,6 @@ int main() {
 }  // end main()
 
 
-	// =======================================================================================
-	// Functions
-	// =======================================================================================
-
-	// Autopilot Engage button depends on LASTE position
-int EngageAPkey() {
-	if (Throttle[APPAT]) ActKey(KEYON+ HUD);
-	else if (Throttle[APAH]) ActKey(KEYON+ OrbitLines);
-	else if (Throttle[APALT]) ActKey(KEYON+ Screenshot);
-}
-
-int TG1_Norm() {
-	MapKey(&Joystick, TG1, DX1);
-	MapKey(&Joystick, TG2, DX2);  //Combine fire cuz what else are we gonna put on trigger?
-}
-
-int TG1_AutoRepeat() {
-	MapKey(&Joystick, TG1, REXEC(10, AUTOREPEAT_TIME, "ActKey(KEYON+PULSE+DX1);")); 
-}
-
-int TG2_Pwr() {
-	MapKeyUMD(&Joystick, TG2,   //Squeeze to intensify forward fire power
-		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,ENG); }" ), //U
-		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP); }" ),     //M
-		EXEC("if (!TriggerWEP) { TriggerWEP = 1; mPower(WEP,SYS); }" )  //D
-		);  
-	
-}
 
 int EventHandle(int type, alias o, int x) {
 	int LED_BRT, TRPCOMBO, Differential_Toe;
