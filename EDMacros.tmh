@@ -1,5 +1,5 @@
 // Init vars used in script
-int mRequestDock, mPowerPlant, mFastModeSwitch;
+int mRequestDock, mPowerPlant, mFastModeSwitch, mHardpoints;
 int mThrottleFwdOnly, mThrottleFullScale, mThrottlePrecision, mSplitThrottle;
 int split = 0;  //Flag for mSplitThrottle
 int LED_BAR_0, LED_BAR_1, LED_BAR_2, LED_BAR_3, LED_BAR_4, LED_BAR_5;
@@ -61,6 +61,8 @@ int initThrottleAxis() {
 
 
 int initCustomCommands() {
+
+	mHardpoints = EXEC("if (!Joystick[S3]) ActKey(KEYON+ PULSE+DeployHardpoints);");
 	
 	// Dock request
 	mRequestDock = CHAIN(
@@ -77,18 +79,18 @@ int initCustomCommands() {
 	
 
 	mFastModeSwitch = CHAIN(				// MACRO: Automated Game Mode Switching
-		LOCK+PULSE+UIEscape, D(700),		// From Cockpit, it will navigate the Game Menu to put you back at the Game Mode selection screen automatically!
-		PULSE+UIUp, D(400),
-		PULSE+UIUp, D(400),
+		LOCK+PULSE+UIEscape, D(500),		// From Cockpit, it will navigate the Game Menu to put you back at the Game Mode selection screen automatically!
+		PULSE+UIUp, D(),
+		PULSE+UIUp, D(),
 		PULSE+UISelect, D(500),
-		PULSE+UIRight, D(250),
-		PULSE+UISelect, D(5000),			// ** Depending on the load times of your PC, this value may need to be changed/increased (6000ms is default)
-		PULSE+UIDown, D(500),
+		PULSE+UIRight, D(200),
+		PULSE+UISelect, D(4000),			// ** Depending on the load times of your PC, this value may need to be changed/increased (6000ms is default)
+		PULSE+UIDown, D(),
 		PULSE+UISelect, LOCK
 	);	
 
 	// SelectPrevSubsystem x 7 (Targets Powerplant, or close to it)
-	mPowerPlant = RPT(PULSE+SelectPrevSubsystem, 7, 28); //do not set delay to 25ms, causes weirdness with SHIFT
+	mPowerPlant = RPT(PULSE+SelectPrevSubsystem, 7, 28); //do not set delay to 25ms, causes weirdness with SHIFT sticking, misses keys
 
 	// Trim first 50% of throttle movement
 	mThrottleFwdOnly = EXEC(

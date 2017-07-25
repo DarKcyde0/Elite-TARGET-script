@@ -25,7 +25,7 @@ int main() {
 	if(Init(&EventHandle)) return 1;
 
 	// Base settings
-	SetKBRate(25, 75);
+	SetKBRate(25, 75);  //PULSE ms, D() ms
 	SetKBLayout(KB_ENG);
 	ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 43)); // Init LEDs, 0, 43, 86, 129, 172, 215
 	SetShiftButton(&Joystick, S3, &Throttle, BSF, BSB); // Pinky for IO, Boat switch for UMD
@@ -65,11 +65,11 @@ int main() {
 	// Boat switch - UMD mode changes 2ndary power balance. U = offence, M = balanced, D = defence/retreat
 	MapKeyIOUMD(&Joystick, H1U, 
 		PULSE+PowerEng, //I U 
-		TEMPO(EXEC("mPower(ENG,WEP);"), EXEC("mPower(ENG,SYS,MID);"), HOLD), //O U 
+		TEMPO(EXEC("mPower(ENG,WEP);"), EXEC("mPower(WEP,SYS,MID);"), HOLD), //O U 
 		PULSE+PowerEng, //I M  
-		TEMPO(EXEC("mPower(ENG);"),  EXEC("mPower(ENG,SYS,MID);"), HOLD), //O M 
+		TEMPO(EXEC("mPower(ENG);"),  EXEC("mPower(WEP,SYS,MID);"), HOLD), //O M 
 		PULSE+PowerEng, //I D 
-		TEMPO(EXEC("mPower(ENG,SYS);"), EXEC("mPower(ENG,SYS,MID);"), HOLD) //O D
+		TEMPO(EXEC("mPower(ENG,SYS);"), EXEC("mPower(WEPYG,SYS,MID);"), HOLD) //O D
 		); 
 		
 	MapKey(&Joystick, H1D, TEMPO(BalancePower, EXEC("mPower(WEP,SYS,MID);"), HOLD));
@@ -93,16 +93,16 @@ int main() {
 		); 
 	
 	//TMS
-	MapKeyIO(&Joystick, H2U, SelectNextSystemInRoute, SelectTargetAhead);
-	MapKey(&Joystick, H2D, SelectHighestThreat);
-	MapKeyIO(&Joystick, H2L, SelectPrevShip, SelectPrevHostileShip);
-	MapKeyIO(&Joystick, H2R, SelectNextShip, SelectNextHostileShip);
+	MapKeyIO(&Joystick, H2U, PULSE+SelectHighestThreat, SelectTargetAhead);
+	MapKey(&Joystick, H2D, SelectNextSystemInRoute);
+	MapKey(&Joystick, H2L, PULSE+SelectPrevHostileShip);
+	MapKey(&Joystick, H2R, PULSE+SelectNextHostileShip);
 
 	//DMS Castle hat
-	MapKey(&Joystick, H3U, TEMPO(CommsPanel, PULSE+QuickCommsPanel, HOLD));
-	MapKey(&Joystick, H3D, TEMPO(SensorPanel, PULSE+UIEscape, HOLD));
-	MapKey(&Joystick, H3L, TEMPO(TargetPanel, PULSE+SystemMap, HOLD));
-	MapKey(&Joystick, H3R, TEMPO(SystemPanel, PULSE+GalaxyMap, HOLD));
+	MapKeyIO(&Joystick, H3U, TargetWingmans_Target, PULSE+ SelectNextSubsystem);
+	MapKeyIO(&Joystick, H3D, TargetWingman2, TEMPO(SelectPrevSubsystem, mPowerPlant, HOLD));
+	MapKeyIO(&Joystick, H3L, TargetWingman3, SelectPrevShip);
+	MapKeyIO(&Joystick, H3R, TargetWingman1, SelectNextShip);
 
 	//CMS
 	MapKey(&Joystick, H4U, UIUp);
@@ -119,9 +119,10 @@ int main() {
 	MapKey(&Throttle, MSL, ThrustLeft);
 	MapKey(&Throttle, MSR, ThrustRight);
 	MapKey(&Throttle, MSP, Microphone);
-
-	MapKeyIO(&Throttle, SPDF, 0, PULSE+DeployHardpoints);  //Hardpoints and FSD mutually exclusive, good for same switch
-	MapKeyRIO(&Throttle, SPDF, 0, PULSE+DeployHardpoints);  //shift disables if out of sync
+	
+	//Hardpoints and FSD mutually exclusive, good for same switch
+	MapKey(&Throttle, SPDF, mHardpoints);  
+	MapKeyR(&Throttle, SPDF, mHardpoints);  //R keeps IO state of press, so we have to check shift explicitly instead of MapKeyRIO
 	MapKeyIO(&Throttle, SPDB, WingNavLock, TEMPO(FrameShiftDrive, Supercruise, HOLD)); // When FSD target is blocked, Hold for Supercruise
 
 	MapKey(&Throttle, BSF, 0); //UMD switch
@@ -138,12 +139,12 @@ int main() {
 	MapKey(&Throttle, LTB, EXEC("if (!Throttle[FLAPD]) ActKey(KEYON+EngineBoost);")); //Dont boost when landing/precise maneouvers
 	MapKeyR(&Throttle, LTB, UP+EngineBoost);
 	
-	MapKeyIO(&Throttle, SC, TEMPO(SelectNextSystemInRoute, BuggyEbrake, HOLD), UIFocus); 
+	MapKey(&Throttle, SC, UIFocus); 
 
-	MapKeyIO(&Throttle, CSU, TargetWingmans_Target, TEMPO(SelectPrevSubsystem, mPowerPlant, HOLD));
-	MapKeyIO(&Throttle, CSD, TargetWingman2, PULSE+ SelectNextSubsystem);
-	MapKeyIO(&Throttle, CSL, TargetWingman3, PULSE+ SelectPrevShip);
-	MapKeyIO(&Throttle, CSR, TargetWingman1, PULSE+ SelectNextShip);
+	MapKey(&Throttle, CSU, PULSE+UIEscape);
+	MapKey(&Throttle, CSD, 0);
+	MapKey(&Throttle, CSL, PULSE+SystemMap);
+	MapKey(&Throttle, CSR, PULSE+GalaxyMap);
 
 	
 	MapKey(&Throttle, IDLELON, TEMPO(0, mSplitThrottle, HOLD));  //Needs delay, prevents accidental engagement.
@@ -166,8 +167,8 @@ int main() {
 	MapKey(&Throttle, EORMOTOR, 0);
 
 	//MapKey(&Throttle, APUON, TEMPO(0, PULSE+JettisonAllCargo, JETTISON_CARGO_DELAY));  //Jettison Safety example
-	MapKey(&Throttle, APUON, PULSE+ F8);  //Autohotkey activates Bigscreen
-	MapKey(&Throttle, APUOFF, PULSE+ F9); //Autohotkey activates Elite
+	MapKey(&Throttle, APUON, 0);
+	MapKey(&Throttle, APUOFF, 0);
 
 	MapKey(&Throttle, FLAPU, mThrottleFwdOnly);
 	MapKey(&Throttle, FLAPM, mThrottleFullScale);
@@ -182,9 +183,9 @@ int main() {
 	MapKey(&Throttle, RDRDIS, CargoScoop);
 
 	MapKey(&Throttle, APENG, EXEC("EngageAPkey();"));
-	MapKey(&Throttle, APDIS, 0);
+	MapKey(&Throttle, APDIS, 0);  //Key release
 
-	MapKey(&Throttle, APPAT, EXEC("TG1_AutoRepeat();"));  //Mode select for APENG
+	MapKey(&Throttle, APPAT, EXEC("TG1_AutoRepeat();"));  //Mode select for APENG _and_ Trigger mode control
 	MapKey(&Throttle, APAH, EXEC("TG1_Norm();"));
 	MapKey(&Throttle, APALT, EXEC("TG2_Pwr();"));
 	
