@@ -69,7 +69,7 @@ int main() {
 		PULSE+PowerEng, //I M  
 		TEMPO(EXEC("mPower(ENG);"),  EXEC("mPower(WEP,SYS,MID);"), HOLD), //O M 
 		PULSE+PowerEng, //I D 
-		TEMPO(EXEC("mPower(ENG,SYS);"), EXEC("mPower(WEPYG,SYS,MID);"), HOLD) //O D
+		TEMPO(EXEC("mPower(ENG,SYS);"), EXEC("mPower(WEP,SYS,MID);"), HOLD) //O D
 		); 
 		
 	MapKey(&Joystick, H1D, TEMPO(BalancePower, EXEC("mPower(WEP,SYS,MID);"), HOLD));
