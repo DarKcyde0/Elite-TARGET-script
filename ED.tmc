@@ -27,7 +27,7 @@ int main() {
 	// Base settings
 	SetKBRate(25, 75);  //PULSE ms, D() ms
 	SetKBLayout(KB_ENG);
-	ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 43)); // Init LEDs, 0, 43, 86, 129, 172, 215
+	ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, 1*43)); // Init LEDs, [0-5] * 43
 	SetShiftButton(&Joystick, S3, &Throttle, BSF, BSB); // Pinky for IO, Boat switch for UMD
 
 	// Init see EDMacros.tmh
@@ -101,8 +101,8 @@ int main() {
 	//DMS Castle hat
 	MapKeyIO(&Joystick, H3U, TargetWingmans_Target, PULSE+ SelectNextSubsystem);
 	MapKeyIO(&Joystick, H3D, TargetWingman2, TEMPO(SelectPrevSubsystem, mPowerPlant, HOLD));
-	MapKeyIO(&Joystick, H3L, TargetWingman3, SelectPrevShip);
-	MapKeyIO(&Joystick, H3R, TargetWingman1, SelectNextShip);
+	MapKeyIO(&Joystick, H3L, TargetWingman3, PULSE+SelectPrevShip);
+	MapKeyIO(&Joystick, H3R, TargetWingman1, SelectNextShip);  //Why does this work and PrevShip needs pulse?
 
 	//CMS
 	MapKey(&Joystick, H4U, UIUp);
@@ -190,9 +190,10 @@ int main() {
 	MapKey(&Throttle, APALT, EXEC("TG2_Pwr();"));
 	
 	//must do this inside main()
-    SetSCurve(&TFRPRudder, TRPRIGHT, 0, 0, 20, 0, 0); //Right Toe Brake
-    SetSCurve(&TFRPRudder, TRPLEFT, 0, 0, 20, 0, 0); //Left Toe Brake
-
+    SetSCurve(&TFRPRudder, TRPRIGHT, 0, 0, 0, 0, 0); //Right Toe Brake
+    SetSCurve(&TFRPRudder, TRPLEFT, 0, 0, 0, 0, 0); //Left Toe Brake
+	SetSCurve(&TFRPRudder, TRUDDER, 0, 0, 0, 0, 0);
+	
 }  // end main()
 
 
@@ -206,34 +207,22 @@ int EventHandle(int type, alias o, int x) {
 		ActKey(PULSE+KEYON+LED (&Throttle, LED_INTENSITY, LED_BRT));
 	}
 	
-	// Old Combine rudder toe brakes into new axis, mapped to DX_THROTTLE_AXIS
-//	if (&o == &TFRPRudder & (x == TRPLEFT | x == TRPRIGHT)) {
-//		if (TFRPRudder[TRPLEFT] < TFRPRudder[TRPRIGHT]) TRPCOMBO = TFRPRudder[TRPRIGHT];
-//		else TRPCOMBO = TFRPRudder[TRPLEFT];
-//		GameOutput (&o, TRPLEFT, -TRPCOMBO);
-//	}
-	
 	//Map the MODE_FILTERED TFRP through Target; we can Trim, set deadzones, J/Scurves, etc.
 	//X axis = Differential combined toe brakes, rest at center
 	//Y axis = Both toe brakes pressed at same time, rest at 0
 	//Z axis = rudder (as default)
 	if (&o == &TFRPRudder) {  
 		GetAxisData(&o, x);
-		axdata.val = AxisVal(o[x], &axdata);
-		//if(x == TRPLEFT | x == TRPRIGHT) axdata.val = -axdata.val;  //Reverse the Toe Brakes, TM why u do dis??
 		if(x == TRPLEFT | x == TRPRIGHT) {
 			axdata.locked = 1;
 			Differential_Toe = -TFRPRudder[TRPRIGHT]/2 + TFRPRudder[TRPLEFT]/2;
-			//Differential_Toe = AxisVal(Differential_Toe, &axdata);
-			GameOutput(&o, TRPRIGHT, Differential_Toe);
+			GameOutput(&o, TRPRIGHT, AxisVal(Differential_Toe, &axdata));
 			
 			if (TFRPRudder[TRPLEFT] < TFRPRudder[TRPRIGHT]) TRPCOMBO = TFRPRudder[TRPRIGHT];
 			else TRPCOMBO = TFRPRudder[TRPLEFT];
-			TRPCOMBO = AxisVal(TRPCOMBO, &axdata);
-			GameOutput (&o, TRPLEFT, -TRPCOMBO);
+			GameOutput (&o, TRPLEFT, AxisVal(-TRPCOMBO, &axdata));
 		}
-		//axdata.locked = 1;  //Uncomment to disable pedals but keep TRPCOMBO axis
-		if(!axdata.locked & !axdata.relative) GameOutput(&o, x, axdata.val);
+		if(!axdata.locked & !axdata.relative) GameOutput(&o, x, AxisVal(o[x], &axdata));
 	}
 	
 	//SquareTheCircle Joystick code
